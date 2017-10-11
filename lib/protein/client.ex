@@ -168,16 +168,7 @@ defmodule Protein.Client do
       end
 
       def init(_) do
-        transport_client_opts = __transport_client_opts__()
-        transport_client_mod = Keyword.fetch!(transport_client_opts, :client_mod)
-
-        if Code.ensure_loaded?(transport_client_mod) do
-          Supervisor.init([
-            {transport_client_mod, transport_client_opts}
-          ], strategy: :one_for_one)
-        else
-          Supervisor.init([], strategy: :one_for_one)
-        end
+        Supervisor.init([], strategy: :one_for_one)
       end
 
       defp __transport_client_opts__ do
@@ -206,7 +197,24 @@ defmodule Protein.Client do
         transport_client_opts = __transport_client_opts__()
         service_opts = __service_opts__(request_mod)
 
+        ensure_connection_started(transport_client_opts)
+
         apply(Protein.Client, method, [request_struct, service_opts, transport_client_opts])
+      end
+
+      defp ensure_connection_started(transport_client_opts) do
+        transport_client_mod = Keyword.fetch!(transport_client_opts, :client_mod)
+
+        if Code.ensure_loaded?(transport_client_mod) do
+          pid = Process.whereis(__MODULE__)
+          spec = worker(transport_client_mod, [transport_client_opts])
+
+          case Supervisor.start_child(pid, spec) do
+            {:ok, _} -> nil
+            {:error, {:already_started, _}} -> nil
+            {:error, error} -> raise("Error starting client: #{inspect error}")
+          end
+        end
       end
     end
   end

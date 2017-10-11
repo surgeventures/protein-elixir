@@ -56,6 +56,11 @@ defmodule Protein.Server do
   transport layer) as argument and returns response payload (that would normally get returned via
   transport layer) or nil (for non-responding services).
 
+  ## Serving
+
+  By default, the actual server process is not started. In order to start it, you can either invoke
+  the `Mix.Tasks.Protein.Server` task or set the `serve` config flag to `true`.
+
   ### Defining services
 
   After implementing the server and adding services/protos to it, you need to implement a module set
@@ -127,6 +132,13 @@ defmodule Protein.Server do
       end
 
       def init(_) do
+        serve = Application.get_env(:protein, :serve) || false
+        children = if serve, do: get_children(), else: []
+
+        Supervisor.init(children, strategy: :one_for_one)
+      end
+
+      defp get_children do
         transport_opts = __transport_opts__()
         transport_server_mod =
           transport_opts
@@ -135,9 +147,7 @@ defmodule Protein.Server do
           |> Utils.resolve_adapter_server_mod()
         transport_server_opts = Keyword.put(transport_opts, :server_mod, __MODULE__)
 
-        Supervisor.init([
-          {transport_server_mod, transport_server_opts}
-        ], strategy: :one_for_one)
+        [{transport_server_mod, transport_server_opts}]
       end
 
       def process(request) do
