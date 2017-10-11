@@ -151,6 +151,7 @@ defmodule Protein.Client do
     CallError,
     RequestPayload,
     ResponsePayload,
+    Server,
     Transport,
     TransportError,
     Utils,
@@ -242,7 +243,7 @@ defmodule Protein.Client do
 
   defp call_via_mock(request_buf, request_mod, response_mod, mock_mod) do
     if Utils.mocking_enabled?() do
-      Utils.process_service(mock_mod, request_buf, request_mod, response_mod)
+      Server.process_service(mock_mod, request_buf, request_mod, response_mod)
     end
   rescue
     error -> raise TransportError, adapter: :mock, context: error
@@ -283,7 +284,7 @@ defmodule Protein.Client do
 
   defp push_via_mock(request_buf, request_mod, mock_mod) do
     if Utils.mocking_enabled?() && Utils.mod_defined?(mock_mod) do
-      Utils.process_service(mock_mod, request_buf, request_mod)
+      Server.process_service(mock_mod, request_buf, request_mod)
     end
   rescue
     error -> raise TransportError, adapter: :mock, context: error

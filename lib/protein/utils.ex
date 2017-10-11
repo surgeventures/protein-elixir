@@ -25,29 +25,6 @@ defmodule Protein.Utils do
     end
   end
 
-  def process_service(service_mod, request_buf, request_mod) do
-    request_buf
-    |> request_mod.decode()
-    |> service_mod.call()
-  end
-  def process_service(service_mod, request_buf, request_mod, response_mod) do
-    case process_service(service_mod, request_buf, request_mod) do
-      :ok ->
-        {:ok, response_mod.encode(response_mod.new())}
-      {:ok, response_struct} ->
-        {:ok, response_mod.encode(response_struct)}
-      :error ->
-        {:error, [error: nil]}
-      {:error, errors} when is_list(errors) ->
-        {:error, Enum.map(errors, &normalize_error/1)}
-      {:error, error} ->
-        {:error, [normalize_error(error)]}
-    end
-  end
-
-  defp normalize_error(reason) when is_atom(reason) or is_binary(reason), do: {reason, nil}
-  defp normalize_error({reason, pointer}), do: {reason, pointer}
-
   def resolve_adapter(:amqp), do: AMQPAdapter
   def resolve_adapter(:http), do: HTTPAdapter
   def resolve_adapter(adapter_mod), do: adapter_mod

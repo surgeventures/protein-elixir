@@ -44,6 +44,16 @@ defmodule Protein.Server do
         end
       end
 
+  ### Macros and functions
+
+  By invoking `use Protein.Client`, you include the `Protein.Router` macros in your client as
+  a means for defining a list of services and transport options. Check out its documentation for
+  more information.
+
+  Server isn't usually invoked directly, but you can still make it process a request by invoking the
+  `process/1` function. It takes the request payload as argument and returns response payload or nil
+  (for non-responding services).
+
   ### Defining services
 
   After implementing the server and adding services/protos to it, you need to implement a module set
@@ -148,16 +158,40 @@ defmodule Protein.Server do
     case request_type do
       :call ->
         response = log_process(request_type, service_name, fn ->
-          Utils.process_service(service_mod, request_buf, request_mod, response_mod)
+          process_service(service_mod, request_buf, request_mod, response_mod)
         end)
         ResponsePayload.encode(response)
       :push ->
         log_process(:push, service_name, fn ->
-          Utils.process_service(service_mod, request_buf, request_mod)
+          process_service(service_mod, request_buf, request_mod)
         end)
         nil
     end
   end
+
+  @doc false
+  def process_service(service_mod, request_buf, request_mod) do
+    request_buf
+    |> request_mod.decode()
+    |> service_mod.call()
+  end
+  def process_service(service_mod, request_buf, request_mod, response_mod) do
+    case process_service(service_mod, request_buf, request_mod) do
+      :ok ->
+        {:ok, response_mod.encode(response_mod.new())}
+      {:ok, response_struct} ->
+        {:ok, response_mod.encode(response_struct)}
+      :error ->
+        {:error, [error: nil]}
+      {:error, errors} when is_list(errors) ->
+        {:error, Enum.map(errors, &normalize_error/1)}
+      {:error, error} ->
+        {:error, [normalize_error(error)]}
+    end
+  end
+
+  defp normalize_error(reason) when is_atom(reason) or is_binary(reason), do: {reason, nil}
+  defp normalize_error({reason, pointer}), do: {reason, pointer}
 
   defp detect_request_type(response_mod) do
     case Code.ensure_loaded(response_mod) do
