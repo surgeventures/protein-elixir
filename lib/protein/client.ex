@@ -171,7 +171,7 @@ defmodule Protein.Client do
         transport_client_opts = __transport_client_opts__()
         transport_client_mod = Keyword.fetch!(transport_client_opts, :client_mod)
 
-        if Utils.mod_defined?(transport_client_mod) do
+        if Code.ensure_loaded?(transport_client_mod) do
           Supervisor.init([
             {transport_client_mod, transport_client_opts}
           ], strategy: :one_for_one)
@@ -218,7 +218,7 @@ defmodule Protein.Client do
     response_mod = Keyword.fetch!(service_opts, :response_mod)
     mock_mod = Keyword.fetch!(service_opts, :mock_mod)
 
-    unless Utils.mod_defined?(response_mod), do: raise "Called to non-responding service"
+    unless Code.ensure_loaded?(response_mod), do: raise "Called to non-responding service"
 
     request_buf = request_mod.encode(request_struct)
 
@@ -272,7 +272,7 @@ defmodule Protein.Client do
     response_mod = Keyword.fetch!(service_opts, :response_mod)
     mock_mod = Keyword.fetch!(service_opts, :mock_mod)
 
-    if Utils.mod_defined?(response_mod), do: raise "Pushed to responding service"
+    if Code.ensure_loaded?(response_mod), do: raise "Pushed to responding service"
 
     request_buf = request_mod.encode(request_struct)
 
@@ -283,7 +283,7 @@ defmodule Protein.Client do
   end
 
   defp push_via_mock(request_buf, request_mod, mock_mod) do
-    if Utils.mocking_enabled?() && Utils.mod_defined?(mock_mod) do
+    if Utils.mocking_enabled?() && Code.ensure_loaded?(mock_mod) do
       Server.process_service(mock_mod, request_buf, request_mod)
     end
   rescue

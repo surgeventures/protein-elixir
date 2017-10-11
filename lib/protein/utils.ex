@@ -20,13 +20,6 @@ defmodule Protein.Utils do
     Application.get_env(:protein, :mocking_enabled)
   end
 
-  def mod_defined?(mod) do
-    case Code.ensure_loaded(mod) do
-      {:module, _} -> true
-      _ -> false
-    end
-  end
-
   def resolve_adapter(:amqp), do: AMQPAdapter
   def resolve_adapter(:http), do: HTTPAdapter
   def resolve_adapter(adapter_mod), do: adapter_mod
