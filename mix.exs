@@ -18,7 +18,7 @@ defmodule Protein.Mixfile do
        "coveralls.detail": :test,
        "coveralls.html": :test],
      name: "Protein",
-     description: "Remote procedure call system based on Protocol Buffers",
+     description: "Multi-platform remote procedure call (RPC) system based on Protocol Buffers",
      source_url: "https://github.com/surgeventures/protein-elixir",
      homepage_url: "https://github.com/surgeventures/protein-elixir",
      docs: [main: "readme",
