@@ -50,9 +50,11 @@ defmodule Protein.Server do
   a means for defining a list of services and transport options. Check out its documentation for
   more information.
 
-  Server isn't usually invoked directly, but you can still make it process a request by invoking the
-  `process/1` function. It takes the request payload as argument and returns response payload or nil
-  (for non-responding services).
+  Under normal circumstances, the server is invoked by traffic from the transport layer and not
+  directly. Still, you can make it process a request by bypassing the transport and invoking the
+  `process/1` function directly. It takes the request payload (that would normally come via
+  transport layer) as argument and returns response payload (that would normally get returned via
+  transport layer) or nil (for non-responding services).
 
   ### Defining services
 
@@ -118,7 +120,7 @@ defmodule Protein.Server do
       use Protein.Router
       use Supervisor
       require Logger
-      alias Protein.Transport
+      alias Protein.{Server, Transport}
 
       def start_link(_opts \\ []) do
         Supervisor.start_link(__MODULE__, [], name: __MODULE__)
@@ -142,7 +144,7 @@ defmodule Protein.Server do
         {service_name, request_buf} = RequestPayload.decode(request)
         service_opts = __service_opts__(service_name)
 
-        Protein.Server.process(request_buf, service_opts)
+        Server.process(request_buf, service_opts)
       end
     end
   end
@@ -175,6 +177,7 @@ defmodule Protein.Server do
     |> request_mod.decode()
     |> service_mod.call()
   end
+  @doc false
   def process_service(service_mod, request_buf, request_mod, response_mod) do
     case process_service(service_mod, request_buf, request_mod) do
       :ok ->

@@ -1,4 +1,6 @@
 defmodule Protein.Utils do
+  @moduledoc false
+
   alias Confix
   alias Protein.{AMQPAdapter, HTTPAdapter}
 

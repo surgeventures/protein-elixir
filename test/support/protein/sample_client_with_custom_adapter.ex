@@ -1,4 +1,6 @@
 defmodule Protein.SampleClientWithCustomAdapter.Adapter do
+  @moduledoc false
+
   def call(_, opts) do
     raise("Dummy adapter (opts: #{inspect opts})")
   end

@@ -180,7 +180,7 @@ defmodule Protein.Client do
         end
       end
 
-      defp __transport_client_opts__() do
+      defp __transport_client_opts__ do
         transport_opts = __transport_opts__()
         adapter = Keyword.fetch!(transport_opts, :adapter)
         adapter_mod = Utils.resolve_adapter(adapter)
