@@ -1,4 +1,4 @@
-defmodule Surgex.RPC.Router do
+defmodule Protein.Router do
   @moduledoc """
   Macros for defining a list of services later routed by RPC clients/servers.
   """
@@ -8,7 +8,7 @@ defmodule Surgex.RPC.Router do
   @doc false
   defmacro __using__(_) do
     quote do
-      import Surgex.RPC.Router
+      import Protein.Router
 
       def __transport_opts__ do
         dsl_opts = try do
@@ -32,8 +32,8 @@ defmodule Surgex.RPC.Router do
 
   The following adapters are supported:
 
-  - `Surgex.RPC.AMQPAdapter`
-  - `Surgex.RPC.HTTPAdapter`
+  - `Protein.AMQPAdapter`
+  - `Protein.HTTPAdapter`
 
   You may also use your own adapter module by passing it as first argument.
     """
@@ -48,7 +48,7 @@ defmodule Surgex.RPC.Router do
   @doc """
   Attaches a service inferring its options from given proto name.
 
-  Supports either atom or binary name. Check out moduledoc for `Surgex.RPC.Client` for more info.
+  Supports either atom or binary name. Check out moduledoc for `Protein.Client` for more info.
   """
   defmacro proto(name) do
     {proto, service_name} = case name do

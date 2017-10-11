@@ -1,4 +1,4 @@
-defmodule Surgex.RPC.HTTPAdapter do
+defmodule Protein.HTTPAdapter do
   @moduledoc """
   Transports RPC calls through HTTP requests protected by secret header.
 
@@ -9,7 +9,7 @@ defmodule Surgex.RPC.HTTPAdapter do
   > While both of these could be implemented (with push client implemented via spawn and without
   > caring about spawned process failures or server temporary downtime and the server component
   > implemented either as Plug module or stand-alone cowboy server), all of these functionalities
-  > are a better fit for the `Surgex.RPC.AMQPAdapter` and hence that's the recommended transport
+  > are a better fit for the `Protein.AMQPAdapter` and hence that's the recommended transport
   > method in such cases.
 
   ## Usage
@@ -17,7 +17,7 @@ defmodule Surgex.RPC.HTTPAdapter do
   In order to use this adapter in your client, use the following code:
 
       defmodule MyProject.RemoteRPC do
-        use Surgex.RPC.Client
+        use Protein.Client
 
         transport :http,
           url: "https://app.example.com/rpc",
@@ -35,7 +35,7 @@ defmodule Surgex.RPC.HTTPAdapter do
 
   """
 
-  alias Surgex.RPC.{TransportError, Utils}
+  alias Protein.{TransportError, Utils}
 
   @doc false
   def call(request_payload, opts) do

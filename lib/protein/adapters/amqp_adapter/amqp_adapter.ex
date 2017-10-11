@@ -1,4 +1,4 @@
-defmodule Surgex.RPC.AMQPAdapter do
+defmodule Protein.AMQPAdapter do
   @moduledoc """
   Transports RPC calls through AMQP messaging queue.
 
@@ -7,7 +7,7 @@ defmodule Surgex.RPC.AMQPAdapter do
   In order to use this adapter in your client, use the following code:
 
       defmodule MyProject.RemoteRPC do
-        use Surgex.RPC.Client
+        use Protein.Client
 
         transport :amqp,
           url: "amqp://example.com",
@@ -21,7 +21,7 @@ defmodule Surgex.RPC.AMQPAdapter do
   In order to use this adapter in your server, use the following code:
 
       defmodule MyProject.MyRPC do
-        use Surgex.RPC.Server
+        use Protein.Server
 
         transport :amqp,
           url: "amqp://example.com",
@@ -42,7 +42,7 @@ defmodule Surgex.RPC.AMQPAdapter do
   """
 
   alias AMQP.{Basic, Channel, Connection}
-  alias Surgex.RPC.{TransportError, Utils}
+  alias Protein.{TransportError, Utils}
 
   @doc false
   def call(request_payload, opts) do

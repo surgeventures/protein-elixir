@@ -1,11 +1,11 @@
-defmodule Surgex.RPC.AMQPAdapter.Server do
+defmodule Protein.AMQPAdapter.Server do
   @moduledoc false
 
   use AMQP
   use GenServer
   require Logger
   alias AMQP.{Basic, Channel, Connection, Queue}
-  alias Surgex.RPC.Utils
+  alias Protein.Utils
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, [])

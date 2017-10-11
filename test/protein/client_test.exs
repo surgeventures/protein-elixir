@@ -1,13 +1,13 @@
-defmodule Surgex.RPC.SampleClientWithCustomAdapter.Adapter do
+defmodule Protein.SampleClientWithCustomAdapter.Adapter do
   def call(_, opts) do
     raise("Dummy adapter (opts: #{inspect opts})")
   end
 end
 
-defmodule Surgex.RPC.SampleClientWithCustomAdapter do
+defmodule Protein.SampleClientWithCustomAdapter do
   @moduledoc false
 
-  use Surgex.RPC.Client
+  use Protein.Client
 
   transport __MODULE__.Adapter, x: "y"
 
@@ -21,25 +21,25 @@ defmodule Surgex.RPC.SampleClientWithCustomAdapter do
           mock_mod: __MODULE__.EmptyService.Mock
 end
 
-defmodule Surgex.RPC.SampleClientWithoutService do
+defmodule Protein.SampleClientWithoutService do
   @moduledoc false
 
-  use Surgex.RPC.Client
+  use Protein.Client
 
   transport __MODULE__.Adapter, x: "y"
 end
 
-defmodule Surgex.RPC.ClientTest do
+defmodule Protein.ClientTest do
   use ExUnit.Case, async: false
   import Mock
   alias Mix.Config
-  alias Surgex.RPC.{
+  alias Protein.{
     CallError,
     SampleClient,
     TransportError,
   }
-  alias Surgex.RPC.SampleClient.CreateUser
-  alias Surgex.RPC.SampleClientWithCustomAdapter
+  alias Protein.SampleClient.CreateUser
+  alias Protein.SampleClientWithCustomAdapter
 
   describe "call/1" do
     test "success" do
@@ -200,8 +200,8 @@ defmodule Surgex.RPC.ClientTest do
     end
 
     test "custom adapter error with proto macro" do
-      Config.persist(surgex: [
-        rpc_mocking_enabled: false
+      Config.persist(protein: [
+        mocking_enabled: false
       ])
 
       request = %SampleClientWithCustomAdapter.Empty.Request{}
@@ -210,14 +210,14 @@ defmodule Surgex.RPC.ClientTest do
         SampleClientWithCustomAdapter.call!(request)
       end
     after
-      Config.persist(surgex: [
-        rpc_mocking_enabled: true
+      Config.persist(protein: [
+        mocking_enabled: true
       ])
     end
 
     test "custom adapter error with service macro" do
-      Config.persist(surgex: [
-        rpc_mocking_enabled: false
+      Config.persist(protein: [
+        mocking_enabled: false
       ])
 
       request = %SampleClientWithCustomAdapter.EmptyService.Request{}
@@ -226,14 +226,14 @@ defmodule Surgex.RPC.ClientTest do
         SampleClientWithCustomAdapter.call!(request)
       end
     after
-      Config.persist(surgex: [
-        rpc_mocking_enabled: true
+      Config.persist(protein: [
+        mocking_enabled: true
       ])
     end
 
     test "HTTP adapter success" do
-      Config.persist(surgex: [
-        rpc_mocking_enabled: false
+      Config.persist(protein: [
+        mocking_enabled: false
       ])
 
       mocked_post = fn _, _, _ ->
@@ -269,14 +269,14 @@ defmodule Surgex.RPC.ClientTest do
         }
       end
     after
-      Config.persist(surgex: [
-        rpc_mocking_enabled: true
+      Config.persist(protein: [
+        mocking_enabled: true
       ])
     end
 
     test "HTTP adapter error" do
-      Config.persist(surgex: [
-        rpc_mocking_enabled: false
+      Config.persist(protein: [
+        mocking_enabled: false
       ])
 
       request = %CreateUser.Request{}
@@ -285,8 +285,8 @@ defmodule Surgex.RPC.ClientTest do
         SampleClient.call!(request)
       end
     after
-      Config.persist(surgex: [
-        rpc_mocking_enabled: true
+      Config.persist(protein: [
+        mocking_enabled: true
       ])
     end
   end

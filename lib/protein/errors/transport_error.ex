@@ -1,9 +1,9 @@
-defmodule Surgex.RPC.TransportError do
+defmodule Protein.TransportError do
   @moduledoc """
   Describes an RPC call failure in the transport layer.
   """
 
-  alias Surgex.RPC.{AMQPAdapter, HTTPAdapter}
+  alias Protein.{AMQPAdapter, HTTPAdapter}
 
   defexception [:adapter, :context]
 

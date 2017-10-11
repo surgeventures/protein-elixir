@@ -1,17 +1,21 @@
-defmodule Surgex.RPC.Utils do
-  alias Surgex.Config, as: SurgexConfig
-  alias Surgex.RPC.{AMQPAdapter, HTTPAdapter}
+defmodule Protein.Utils do
+  alias Surgex.Config
+  alias Protein.{AMQPAdapter, HTTPAdapter}
 
   def get_config(opts, key, default \\ nil) do
     opts
     |> Keyword.get(key, default)
-    |> SurgexConfig.parse()
+    |> Config.parse()
   end
 
   def get_config!(opts, key) do
     opts
     |> Keyword.fetch!(key)
-    |> SurgexConfig.parse()
+    |> Config.parse()
+  end
+
+  def mocking_enabled? do
+    Application.get_env(:protein, :mocking_enabled)
   end
 
   def mod_defined?(mod) do

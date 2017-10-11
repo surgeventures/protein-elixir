@@ -1,4 +1,4 @@
-defmodule Surgex.RPC.Client do
+defmodule Protein.Client do
   @moduledoc """
   Calls services in remote systems.
 
@@ -7,7 +7,7 @@ defmodule Surgex.RPC.Client do
   Here's how your RPC client module may look like:
 
       defmodule MyProject.RemoteRPC do
-        use Surgex.RPC.Client
+        use Protein.Client
 
         # then, declare services with a convention driven config
         proto :create_user
@@ -66,7 +66,7 @@ defmodule Surgex.RPC.Client do
 
   ### Macros and functions
 
-  By invoking `use Surgex.RPC.Client`, you include the `Surgex.RPC.Router` macros in your client as
+  By invoking `use Protein.Client`, you include the `Protein.Router` macros in your client as
   a means for defining a list of services and transport options. Check out its documentation for
   more information.
 
@@ -82,7 +82,7 @@ defmodule Surgex.RPC.Client do
 
   You can enable client mocks by adding the following to your `config/test.exs`:
 
-      config :surgex, rpc_mocking_enabled: true
+      config :protein, mocking_enabled: true
 
   Then, you can add a mock module for your specific service to `test/support`. The module should be
   the `mock_mod` on sample above (which by default is a `service_mod` with the `Mock` suffix). For
@@ -147,7 +147,7 @@ defmodule Surgex.RPC.Client do
 
   """
 
-  alias Surgex.RPC.{
+  alias Protein.{
     CallError,
     RequestPayload,
     ResponsePayload,
@@ -158,9 +158,9 @@ defmodule Surgex.RPC.Client do
 
   defmacro __using__(_) do
     quote do
-      use Surgex.RPC.Router
+      use Protein.Router
       use Supervisor
-      alias Surgex.RPC.{Transport, Utils}
+      alias Protein.{Transport, Utils}
 
       def start_link(_opts \\ []) do
         Supervisor.start_link(__MODULE__, [], name: __MODULE__)
@@ -205,7 +205,7 @@ defmodule Surgex.RPC.Client do
         transport_client_opts = __transport_client_opts__()
         service_opts = __service_opts__(request_mod)
 
-        apply(Surgex.RPC.Client, method, [request_struct, service_opts, transport_client_opts])
+        apply(Protein.Client, method, [request_struct, service_opts, transport_client_opts])
       end
     end
   end
@@ -241,7 +241,7 @@ defmodule Surgex.RPC.Client do
   end
 
   defp call_via_mock(request_buf, request_mod, response_mod, mock_mod) do
-    if Application.get_env(:surgex, :rpc_mocking_enabled) do
+    if Utils.mocking_enabled?() do
       Utils.process_service(mock_mod, request_buf, request_mod, response_mod)
     end
   rescue
@@ -282,7 +282,7 @@ defmodule Surgex.RPC.Client do
   end
 
   defp push_via_mock(request_buf, request_mod, mock_mod) do
-    if Application.get_env(:surgex, :rpc_mocking_enabled) && Utils.mod_defined?(mock_mod) do
+    if Utils.mocking_enabled?() && Utils.mod_defined?(mock_mod) do
       Utils.process_service(mock_mod, request_buf, request_mod)
     end
   rescue

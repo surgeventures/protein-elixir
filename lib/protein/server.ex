@@ -1,4 +1,4 @@
-defmodule Surgex.RPC.Server do
+defmodule Protein.Server do
   @moduledoc """
   Responds to service calls from remote systems.
 
@@ -7,7 +7,7 @@ defmodule Surgex.RPC.Server do
   Here's how your RPC server module may look like:
 
       defmodule MyProject.MyRPC do
-        use Surgex.RPC.Server
+        use Protein.Server
 
         # then, declare services with a convention driven config
         proto :create_user
@@ -101,14 +101,14 @@ defmodule Surgex.RPC.Server do
   """
 
   require Logger
-  alias Surgex.RPC.{RequestPayload, ResponsePayload, Utils}
+  alias Protein.{RequestPayload, ResponsePayload, Utils}
 
   defmacro __using__(_) do
     quote do
-      use Surgex.RPC.Router
+      use Protein.Router
       use Supervisor
       require Logger
-      alias Surgex.RPC.Transport
+      alias Protein.Transport
 
       def start_link(_opts \\ []) do
         Supervisor.start_link(__MODULE__, [], name: __MODULE__)
@@ -132,7 +132,7 @@ defmodule Surgex.RPC.Server do
         {service_name, request_buf} = RequestPayload.decode(request)
         service_opts = __service_opts__(service_name)
 
-        Surgex.RPC.Server.process(request_buf, service_opts)
+        Protein.Server.process(request_buf, service_opts)
       end
     end
   end

@@ -1,11 +1,11 @@
-defmodule Surgex.RPC.AMQPAdapter.Client do
+defmodule Protein.AMQPAdapter.Client do
   @moduledoc false
 
   use AMQP
   use GenServer
   require Logger
   alias AMQP.{Connection, Queue}
-  alias Surgex.RPC.Utils
+  alias Protein.Utils
 
   def start_link(opts) do
     client_name = Keyword.fetch!(opts, :client_name)

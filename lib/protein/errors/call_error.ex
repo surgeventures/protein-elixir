@@ -1,4 +1,4 @@
-defmodule Surgex.RPC.CallError do
+defmodule Protein.CallError do
   @moduledoc """
   Describes an unexpected RPC call rejection.
   """

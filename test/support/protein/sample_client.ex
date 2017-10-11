@@ -1,17 +1,17 @@
-defmodule Surgex.RPC.SampleClient do
+defmodule Protein.SampleClient do
   @moduledoc false
 
-  use Surgex.RPC.Client
+  use Protein.Client
 
   transport :http, url: "http://example.com/rpc", secret: "xyz"
 
   proto :create_user
 end
 
-defmodule Surgex.RPC.SampleClient.CreateUserMock do
+defmodule Protein.SampleClient.CreateUserMock do
   @moduledoc false
 
-  alias Surgex.RPC.SampleClient.CreateUser.{Request, Response}
+  alias Protein.SampleClient.CreateUser.{Request, Response}
 
   def call(%Request{user: %Request.User{name: "Jane", gender: :FEMALE}}) do
     :ok

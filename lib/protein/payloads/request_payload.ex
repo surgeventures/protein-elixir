@@ -1,4 +1,4 @@
-defmodule Surgex.RPC.RequestPayload do
+defmodule Protein.RequestPayload do
   @moduledoc false
 
   def encode(service_name, request_buf) do

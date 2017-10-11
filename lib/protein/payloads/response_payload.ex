@@ -1,4 +1,4 @@
-defmodule Surgex.RPC.ResponsePayload do
+defmodule Protein.ResponsePayload do
   @moduledoc false
 
   def encode({:ok, response}) do
