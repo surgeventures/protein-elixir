@@ -1,17 +1,17 @@
 defmodule Protein.Utils do
-  alias Surgex.Config
+  alias Confix
   alias Protein.{AMQPAdapter, HTTPAdapter}
 
   def get_config(opts, key, default \\ nil) do
     opts
     |> Keyword.get(key, default)
-    |> Config.parse()
+    |> Confix.parse()
   end
 
   def get_config!(opts, key) do
     opts
     |> Keyword.fetch!(key)
-    |> Config.parse()
+    |> Confix.parse()
   end
 
   def mocking_enabled? do

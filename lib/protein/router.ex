@@ -3,7 +3,7 @@ defmodule Protein.Router do
   Macros for defining a list of services later routed by RPC clients/servers.
   """
 
-  alias Surgex.Config
+  alias Confix
 
   @doc false
   defmacro __using__(_) do
@@ -17,7 +17,7 @@ defmodule Protein.Router do
           UndefinedFunctionError -> []
         end
 
-        config_opts = Config.get(__MODULE__, :transport) || []
+        config_opts = Confix.get(__MODULE__, :transport) || []
 
         Keyword.merge(config_opts, dsl_opts)
       end

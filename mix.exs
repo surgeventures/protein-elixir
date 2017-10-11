@@ -3,7 +3,7 @@ defmodule Protein.Mixfile do
 
   def project do
     [app: :protein,
-     version: "1.0.0",
+     version: "0.1.0",
      elixir: "~> 1.4",
      elixirc_paths: elixirc_paths(Mix.env),
      build_embedded: Mix.env == :prod,
@@ -22,8 +22,7 @@ defmodule Protein.Mixfile do
      source_url: "https://github.com/surgeventures/protein-elixir",
      homepage_url: "https://github.com/surgeventures/protein-elixir",
      docs: [main: "readme",
-            logo: "logo.png",
-            extras: ["README.md", "CHANGELOG.md"]]]
+            extras: ["README.md"]]]
   end
 
   defp package do
@@ -32,7 +31,7 @@ defmodule Protein.Mixfile do
      links: %{
        "GitHub" => "https://github.com/surgeventures/protein-elixir",
      },
-     files: ~w(mix.exs lib LICENSE.md README.md CHANGELOG.md)]
+     files: ~w(mix.exs lib LICENSE.md README.md)]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
@@ -47,6 +46,7 @@ defmodule Protein.Mixfile do
   defp deps do
     [
       {:amqp, "~> 0.2"},
+      {:confix, "~> 0.1"},
       {:credo, "~> 0.8.1", only: [:dev, :test]},
       {:ex_doc, "~> 0.14", only: :dev, runtime: false},
       {:excoveralls, "~> 0.7", only: :test},
@@ -54,7 +54,6 @@ defmodule Protein.Mixfile do
       {:httpoison, "~> 0.13"},
       {:mock, "~> 0.2.1", only: :test},
       {:poison, "~> 2.0 or ~> 3.0"},
-      {:surgex, "~> 2.18.1"},
     ]
   end
 
