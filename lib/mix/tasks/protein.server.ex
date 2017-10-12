@@ -9,7 +9,7 @@ defmodule Mix.Tasks.Protein.Server do
 
   @doc false
   def run(args) do
-    Application.put_env(:protein, :serve, true)
+    Application.put_env(:protein, :serve, true, persistent: true)
     Mix.Tasks.Run.run run_args() ++ args
   end
 

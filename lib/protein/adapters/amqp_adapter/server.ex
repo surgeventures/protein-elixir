@@ -31,18 +31,23 @@ defmodule Protein.AMQPAdapter.Server do
   defp connect(opts) do
     url = Utils.get_config!(opts, :url)
     queue = Utils.get_config!(opts, :queue)
-    reconnect_int = Utils.get_config(opts, :reconnect_interval, 5_000)
-    concurrency = Utils.get_config(opts, :concurrency, 5)
 
     case init_conn_chan_queue(url, queue) do
       {:ok, conn, chan} ->
+        concurrency = Utils.get_config(opts, :concurrency, 5)
         Process.monitor(conn.pid)
         Basic.consume(chan, queue)
         Basic.qos(chan, prefetch_count: concurrency)
-        Logger.debug(fn -> "Connected to #{url}, serving RPC calls from #{queue}" end)
+        Logger.info(fn ->
+          server_mod = Keyword.fetch!(opts, :server_mod)
+          "Serving #{inspect(server_mod)} with AMQP from #{queue} at #{url}"
+        end)
         chan
       :error ->
-        Logger.error(fn -> "Connection to #{url} failed, reconnecting in #{reconnect_int}ms" end)
+        reconnect_int = Utils.get_config(opts, :reconnect_interval, 5_000)
+        Logger.error(fn ->
+          "Connection to #{url} failed, reconnecting in #{reconnect_int}ms"
+        end)
         :timer.sleep(reconnect_int)
         connect(opts)
     end
