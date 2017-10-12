@@ -80,12 +80,13 @@ defmodule Protein.Client do
 
   ### Mocking for tests
 
-  You can enable client mocks by adding the following to your `config/test.exs`:
+  Client call mocking is enabled by default for `Mix.env == :test`. You can configure it explicitly
+  via the `mocking_enabled` config flag as follows:
 
       config :protein, mocking_enabled: true
 
-  Then, you can add a mock module for your specific service to `test/support`. The module should be
-  the `mock_mod` on sample above (which by default is a `service_mod` with the `Mock` suffix). For
+  You can add a mock module for your specific service to `test/support`. The module should be the
+  `mock_mod` on sample above (which by default is a `service_mod` with the `Mock` suffix). For
   example, to mock the service sourced from `create_user.proto` on example above, you may implement
   the following module:
 
@@ -205,7 +206,7 @@ defmodule Protein.Client do
       defp ensure_connection_started(transport_client_opts) do
         transport_client_mod = Keyword.fetch!(transport_client_opts, :client_mod)
 
-        if Code.ensure_loaded?(transport_client_mod) do
+        if Code.ensure_loaded?(transport_client_mod) && !Utils.mocking_enabled?() do
           pid = Process.whereis(__MODULE__)
           spec = worker(transport_client_mod, [transport_client_opts])
 

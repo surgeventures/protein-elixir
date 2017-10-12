@@ -17,7 +17,7 @@ defmodule Protein.Utils do
   end
 
   def mocking_enabled? do
-    Application.get_env(:protein, :mocking_enabled)
+    Application.get_env(:protein, :mocking_enabled, Mix.env == :test)
   end
 
   def resolve_adapter(:amqp), do: AMQPAdapter
