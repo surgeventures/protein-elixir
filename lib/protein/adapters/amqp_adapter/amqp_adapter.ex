@@ -41,30 +41,30 @@ defmodule Protein.AMQPAdapter do
 
   """
 
-  alias AMQP.{Basic, Channel, Connection}
+  alias AMQP.Basic
   alias Protein.{TransportError, Utils}
 
   @doc false
-  def call(request_payload, opts) do
-    client_name = Keyword.fetch!(opts, :client_name)
+  def call(request, opts) do
+    {chan, response_queue} = get_connection(opts)
     queue = Utils.get_config!(opts, :queue)
     timeout = Utils.get_config(opts, :timeout, 15_000)
 
-    make_amqp_call(request_payload, client_name, queue, timeout)
-  end
-
-  defp make_amqp_call(request, client_name, queue, timeout) do
-    channel = GenServer.call(client_name, :get_channel)
-    response_queue = GenServer.call(client_name, :get_response_queue)
     correlation_id = generate_request_id()
     opts = put_expiration([
       reply_to: response_queue,
       correlation_id: correlation_id], timeout)
 
-    Basic.consume(channel, response_queue, nil, no_ack: true)
-    Basic.publish(channel, "", queue, request, opts)
+    Basic.consume(chan, response_queue, nil, no_ack: true)
+    Basic.publish(chan, "", queue, request, opts)
 
     wait_for_response(correlation_id, timeout)
+  end
+
+  defp get_connection(opts) do
+    opts
+    |> Keyword.fetch!(:connection_name)
+    |> GenServer.call(:get)
   end
 
   defp generate_request_id do
@@ -89,17 +89,10 @@ defmodule Protein.AMQPAdapter do
   end
 
   @doc false
-  def push(request_payload, opts) do
-    url = Utils.get_config!(opts, :url)
+  def push(request, opts) do
+    {chan, _} = get_connection(opts)
     queue = Utils.get_config!(opts, :queue)
 
-    make_amqp_push(request_payload, url, queue)
-  end
-
-  defp make_amqp_push(request, url, queue) do
-    {:ok, connection} = Connection.open(url)
-    {:ok, channel} = Channel.open(connection)
-
-    Basic.publish(channel, "", queue, request)
+    Basic.publish(chan, "", queue, request)
   end
 end

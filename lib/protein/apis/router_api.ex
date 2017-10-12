@@ -1,6 +1,6 @@
-defmodule Protein.Router do
+defmodule Protein.RouterAPI do
   @moduledoc """
-  Macros for defining a list of services later routed by RPC clients/servers.
+  Macros for defining a list of services and transport options.
   """
 
   alias Confix
@@ -8,7 +8,7 @@ defmodule Protein.Router do
   @doc false
   defmacro __using__(_) do
     quote do
-      import Protein.Router
+      import Protein.RouterAPI
 
       def __transport_opts__ do
         dsl_opts = try do

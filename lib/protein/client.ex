@@ -66,17 +66,10 @@ defmodule Protein.Client do
 
   ### Macros and functions
 
-  By invoking `use Protein.Client`, you include the `Protein.Router` macros in your client as
-  a means for defining a list of services and transport options. Check out its documentation for
-  more information.
+  By invoking `use Protein.Client`, you include the following in your client module:
 
-  Also, you get the `call/1`, `call!/1` and `push/1` functions as a means for actually invoking the
-  client, with each consuming the request structure as argument and the following distinction
-  between the three of them:
-
-  - `call/1` executes a responding service call that is expected to potentially reject the request
-  - `call!/1` executes a responding service call that is expected never to fail
-  - `push/1` executes a non-responding service push
+  - `Protein.RouterAPI`: macros for defining a list of services and transport options
+  - `Protein.ClientAPI`: functions for making client requests to remote services
 
   ### Mocking for tests
 
@@ -160,7 +153,7 @@ defmodule Protein.Client do
 
   defmacro __using__(_) do
     quote do
-      use Protein.Router
+      use Protein.{RouterAPI, ClientAPI}
       use Supervisor
       alias Protein.{Transport, Utils}
 
@@ -170,52 +163,6 @@ defmodule Protein.Client do
 
       def init(_) do
         Supervisor.init([], strategy: :one_for_one)
-      end
-
-      defp __transport_client_opts__ do
-        transport_opts = __transport_opts__()
-        adapter = Keyword.fetch!(transport_opts, :adapter)
-        adapter_mod = Utils.resolve_adapter(adapter)
-        client_mod = Utils.resolve_adapter_client_mod(adapter_mod)
-        client_name = :"#{__MODULE__}.#{adapter_mod |> Module.split |> List.last}Client"
-
-        Keyword.merge(transport_opts, client_mod: client_mod, client_name: client_name)
-      end
-
-      def call(request_struct) do
-        apply_client(request_struct, :call)
-      end
-
-      def call!(request_struct) do
-        apply_client(request_struct, :call!)
-      end
-
-      def push(request_struct) do
-        apply_client(request_struct, :push)
-      end
-
-      defp apply_client(request_struct = %{__struct__: request_mod}, method) do
-        transport_client_opts = __transport_client_opts__()
-        service_opts = __service_opts__(request_mod)
-
-        ensure_connection_started(transport_client_opts)
-
-        apply(Protein.Client, method, [request_struct, service_opts, transport_client_opts])
-      end
-
-      defp ensure_connection_started(transport_client_opts) do
-        transport_client_mod = Keyword.fetch!(transport_client_opts, :client_mod)
-
-        if Code.ensure_loaded?(transport_client_mod) && !Utils.mocking_enabled?() do
-          pid = Process.whereis(__MODULE__)
-          spec = worker(transport_client_mod, [transport_client_opts])
-
-          case Supervisor.start_child(pid, spec) do
-            {:ok, _} -> nil
-            {:error, {:already_started, _}} -> nil
-            {:error, error} -> raise("Error starting client: #{inspect error}")
-          end
-        end
       end
     end
   end

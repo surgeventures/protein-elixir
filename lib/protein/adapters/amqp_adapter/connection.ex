@@ -1,4 +1,4 @@
-defmodule Protein.AMQPAdapter.Client do
+defmodule Protein.AMQPAdapter.Connection do
   @moduledoc false
 
   use AMQP
@@ -8,8 +8,8 @@ defmodule Protein.AMQPAdapter.Client do
   alias Protein.Utils
 
   def start_link(opts) do
-    client_name = Keyword.fetch!(opts, :client_name)
-    GenServer.start_link(__MODULE__, opts, name: client_name)
+    name = Keyword.fetch!(opts, :connection_name)
+    GenServer.start_link(__MODULE__, opts, name: name)
   end
 
   def init(opts) do
@@ -19,19 +19,12 @@ defmodule Protein.AMQPAdapter.Client do
     {:ok, {chan, response_queue, opts}}
   end
 
-  def get_channel(client_name) do
-    GenServer.call(client_name, :get_channel)
+  def get(connection_name) do
+    GenServer.call(connection_name, :get)
   end
 
-  def get_response_queue(client_name) do
-    GenServer.call(client_name, :get_response_queue)
-  end
-
-  def handle_call(:get_channel, _from, state = {chan, _, _}) do
-    {:reply, chan, state}
-  end
-  def handle_call(:get_response_queue, _from, state = {_, response_queue, _}) do
-    {:reply, response_queue, state}
+  def handle_call(:get, _from, state = {chan, response_queue, _opts}) do
+    {:reply, {chan, response_queue}, state}
   end
 
   def handle_info({:basic_consume_ok, _meta}, state), do: {:noreply, state}

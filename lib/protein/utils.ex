@@ -28,7 +28,7 @@ defmodule Protein.Utils do
     :"#{adapter_mod}.Server"
   end
 
-  def resolve_adapter_client_mod(adapter_mod) do
-    :"#{adapter_mod}.Client"
+  def resolve_adapter_connection_mod(adapter_mod) do
+    :"#{adapter_mod}.Connection"
   end
 end

@@ -46,15 +46,16 @@ defmodule Protein.Server do
 
   ### Macros and functions
 
-  By invoking `use Protein.Client`, you include the `Protein.Router` macros in your client as
-  a means for defining a list of services and transport options. Check out its documentation for
-  more information.
+  By invoking `use Protein.Client`, you include the following in your client module:
 
-  Under normal circumstances, the server is invoked by traffic from the transport layer and not
-  directly. Still, you can make it process a request by bypassing the transport and invoking the
-  `process/1` function directly. It takes the request payload (that would normally come via
-  transport layer) as argument and returns response payload (that would normally get returned via
-  transport layer) or nil (for non-responding services).
+  - `Protein.RouterAPI`: macros for defining a list of services and transport options
+  - `Protein.ServerAPI`: functions for handling service calls
+  - `Protein.ClientAPI`: functions for making client requests to remote services
+
+  The inclusion of `Protein.ClientAPI` basically means that every Protein server also includes its
+  own client. This gives a free, useful tool for calling the server. It comes at no cost since
+  client side of things shares the transport and service config with the server. It also won't
+  consume extra resources and won't spawn connection processes until the first client call.
 
   ## Serving
 
@@ -118,11 +119,11 @@ defmodule Protein.Server do
   """
 
   require Logger
-  alias Protein.{RequestPayload, ResponsePayload, Utils}
+  alias Protein.{ResponsePayload, Utils}
 
   defmacro __using__(_) do
     quote do
-      use Protein.Router
+      use Protein.{RouterAPI, ServerAPI, ClientAPI}
       use Supervisor
       require Logger
       alias Protein.{Server, Transport}
@@ -133,12 +134,12 @@ defmodule Protein.Server do
 
       def init(_) do
         serve = Application.get_env(:protein, :serve) || false
-        children = if serve, do: get_children(), else: []
+        children = if serve, do: get_server_children(), else: []
 
         Supervisor.init(children, strategy: :one_for_one)
       end
 
-      defp get_children do
+      defp get_server_children do
         transport_opts = __transport_opts__()
         transport_server_mod =
           transport_opts
@@ -148,13 +149,6 @@ defmodule Protein.Server do
         transport_server_opts = Keyword.put(transport_opts, :server_mod, __MODULE__)
 
         [{transport_server_mod, transport_server_opts}]
-      end
-
-      def process(request) do
-        {service_name, request_buf} = RequestPayload.decode(request)
-        service_opts = __service_opts__(service_name)
-
-        Server.process(request_buf, service_opts)
       end
     end
   end
