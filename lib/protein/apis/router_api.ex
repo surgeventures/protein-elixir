@@ -17,7 +17,7 @@ defmodule Protein.RouterAPI do
           UndefinedFunctionError -> []
         end
 
-        config_opts = Confix.get(__MODULE__, :transport) || []
+        config_opts = Confix.get_in([__MODULE__, :transport]) || []
 
         Keyword.merge(config_opts, dsl_opts)
       end
