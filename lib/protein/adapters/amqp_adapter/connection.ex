@@ -13,28 +13,39 @@ defmodule Protein.AMQPAdapter.Connection do
   end
 
   def init(opts) do
-    chan = connect(opts)
-    response_queue = create_response_queue(chan)
-
-    {:ok, {chan, response_queue, opts}}
+    {chan, response_queue} = connect(opts)
+    responders = :ets.new(:responders, [])
+    {:ok, {chan, response_queue, responders, opts}}
   end
 
-  def get(connection_name) do
-    GenServer.call(connection_name, :get)
-  end
-
-  def handle_call(:get, _from, state = {chan, response_queue, _opts}) do
+  def handle_call(:get_channel_and_response_queue, _from, state = {chan, response_queue, _, _}) do
     {:reply, {chan, response_queue}, state}
+  end
+  def handle_call({:responder_register, id, timeout}, {pid, _}, state = {_, _, responders, _}) do
+    :ets.insert(responders, {id, pid})
+    Process.send_after(self(), {:responder_timoeut, id}, timeout)
+    {:reply, :ok, state}
   end
 
   def handle_info({:basic_consume_ok, _meta}, state), do: {:noreply, state}
   def handle_info({:basic_cancel, _meta}, state), do: {:stop, :normal, state}
   def handle_info({:basic_cancel_ok, _meta}, state), do: {:noreply, state}
+  def handle_info({:basic_deliver, payload, %{correlation_id: id}}, state = {_, _, responders, _}) do
+    case :ets.lookup(responders, id) do
+      [{^id, pid}] ->
+        send(pid, {:response, payload})
+        :ets.delete(responders, id)
+      _ -> nil
+    end
+    {:noreply, state}
+  end
   def handle_info({:DOWN, _, :process, _pid, _reason}, {_, _, opts}) do
-    chan = connect(opts)
-    response_queue = create_response_queue(chan)
-
+    {chan, response_queue} = connect(opts)
     {:noreply, {chan, response_queue, opts}}
+  end
+  def handle_info({:responder_timoeut, id}, state = {_, _, responders, _}) do
+    :ets.delete(responders, id)
+    {:noreply, state}
   end
 
   defp connect(opts) do
@@ -44,17 +55,14 @@ defmodule Protein.AMQPAdapter.Connection do
     case init_conn_chan(url) do
       {:ok, conn, chan} ->
         Process.monitor(conn.pid)
-        chan
+        {:ok, %{queue: response_queue}} = Queue.declare(chan, "", exclusive: true)
+        Basic.consume(chan, response_queue, nil, no_ack: true)
+        {chan, response_queue}
       :error ->
         Logger.error(fn -> "Connection to #{url} failed, reconnecting in #{reconnect_int}ms" end)
         :timer.sleep(reconnect_int)
         connect(opts)
     end
-  end
-
-  defp create_response_queue(chan) do
-    {:ok, %{queue: response_queue}} = Queue.declare(chan, "", exclusive: true)
-    response_queue
   end
 
   defp init_conn_chan(url) do
