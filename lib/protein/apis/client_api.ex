@@ -49,7 +49,7 @@ defmodule Protein.ClientAPI do
           connection_name: connection_name)
       end
 
-      defp ensure_connection_started(opts) do
+      def ensure_connection_started(opts) do
         import Supervisor.Spec
 
         mod = Keyword.fetch!(opts, :connection_mod)

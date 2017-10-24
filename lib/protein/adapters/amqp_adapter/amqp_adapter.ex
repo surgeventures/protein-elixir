@@ -93,7 +93,8 @@ defmodule Protein.AMQPAdapter do
 
   @doc false
   def push(request, opts) do
-    {chan, _} = get_channel_and_response_queue(opts)
+    connection_name = Keyword.fetch!(opts, :connection_name)
+    {chan, _} = get_channel_and_response_queue(connection_name)
     queue = Utils.get_config!(opts, :queue)
 
     Basic.publish(chan, "", queue, request)
