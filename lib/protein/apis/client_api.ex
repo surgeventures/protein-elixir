@@ -37,7 +37,7 @@ defmodule Protein.ClientAPI do
         apply(Protein.Client, method, [request_struct, service_opts, transport_opts])
       end
 
-      defp get_transport_opts do
+      def get_transport_opts do
         transport_opts = __MODULE__.__transport_opts__()
         adapter = Keyword.fetch!(transport_opts, :adapter)
         adapter_mod = Utils.resolve_adapter(adapter)
