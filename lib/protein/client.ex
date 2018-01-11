@@ -143,6 +143,7 @@ defmodule Protein.Client do
 
   alias Protein.{
     CallError,
+    DummyServiceMock,
     RequestPayload,
     ResponsePayload,
     Server,
@@ -239,8 +240,14 @@ defmodule Protein.Client do
   end
 
   defp push_via_mock(request_buf, request_mod, mock_mod) do
-    if Utils.mocking_enabled?() && Code.ensure_loaded?(mock_mod) do
-      Server.process_service(mock_mod, request_buf, request_mod)
+    if Utils.mocking_enabled?() do
+      mock_or_default_mod = if Code.ensure_loaded?(mock_mod) do
+        mock_mod
+      else
+        DummyServiceMock
+      end
+
+      Server.process_service(mock_or_default_mod, request_buf, request_mod)
     end
   rescue
     error -> raise TransportError, adapter: :mock, context: error
