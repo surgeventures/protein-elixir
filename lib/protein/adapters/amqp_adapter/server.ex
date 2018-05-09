@@ -36,11 +36,11 @@ defmodule Protein.AMQPAdapter.Server do
       {:ok, conn, chan} ->
         concurrency = Utils.get_config(opts, :concurrency, 5)
         Process.monitor(conn.pid)
-        Basic.consume(chan, queue)
         Basic.qos(chan, prefetch_count: concurrency)
+        Basic.consume(chan, queue)
         Logger.info(fn ->
           server_mod = Keyword.fetch!(opts, :server_mod)
-          "Serving #{inspect(server_mod)} with AMQP from #{queue} at #{url}"
+          "Serving #{inspect(server_mod)} with AMQP from #{queue} at #{url} (concurrency: #{concurrency})"
         end)
         chan
       :error ->
