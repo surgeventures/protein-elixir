@@ -5,7 +5,7 @@ defmodule Protein.AMQPAdapter.Connection do
   use GenServer
   require Logger
   alias AMQP.{Connection, Queue}
-  alias Protein.Utils
+  alias Protein.{TransportError, Utils}
 
   def start_link(opts) do
     name = Keyword.fetch!(opts, :connection_name)
@@ -50,8 +50,6 @@ defmodule Protein.AMQPAdapter.Connection do
 
   defp connect(opts) do
     url = Utils.get_config!(opts, :url)
-    reconnect_int = Utils.get_config(opts, :reconnect_interval, 1_000)
-
     case init_conn_chan(url) do
       {:ok, conn, chan} ->
         Process.monitor(conn.pid)
@@ -59,9 +57,7 @@ defmodule Protein.AMQPAdapter.Connection do
         Basic.consume(chan, response_queue, nil, no_ack: true)
         {chan, response_queue}
       :error ->
-        Logger.error(fn -> "Connection to #{url} failed, reconnecting in #{reconnect_int}ms" end)
-        :timer.sleep(reconnect_int)
-        connect(opts)
+        raise TransportError, adapter: __MODULE__, context: :no_amqp_connection
     end
   end
 
