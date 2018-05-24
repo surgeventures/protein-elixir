@@ -49,7 +49,7 @@ defmodule Protein.Mixfile do
       {:confix, "~> 0.3"},
       {:credo, "~> 0.8.1", only: [:dev, :test]},
       {:ex_doc, "~> 0.14", only: :dev, runtime: false},
-      {:excoveralls, "~> 0.7", only: :test},
+      {:excoveralls, "~> 0.8", only: :test},
       {:exprotobuf, "~> 1.2"},
       {:httpoison, "~> 0.13"},
       {:mock, "~> 0.2.1", only: :test},
