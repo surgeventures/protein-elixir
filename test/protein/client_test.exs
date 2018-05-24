@@ -5,9 +5,11 @@ defmodule Protein.ClientTest do
   alias Protein.{
     CallError,
     SampleClient,
+    SampleClientUnresponding,
     TransportError,
   }
   alias Protein.SampleClient.CreateUser
+  alias Protein.SampleClientUnresponding.CreateUserUnresponding
   alias Protein.SampleClientWithCustomAdapter
 
   describe "call/1" do
@@ -257,6 +259,32 @@ defmodule Protein.ClientTest do
       Config.persist(protein: [
         mocking_enabled: true
       ])
+    end
+  end
+
+  describe "push/1" do
+    test "success" do
+      request = %CreateUserUnresponding.Request{
+        user: %CreateUserUnresponding.Request.User{
+          name: "Jane",
+          gender: :FEMALE
+        }
+      }
+
+      assert :ok == SampleClientUnresponding.push(request)
+    end
+
+    test "transport error" do
+      request = %CreateUserUnresponding.Request{
+        user: %CreateUserUnresponding.Request.User{
+          name: "some guy",
+          gender: :FEMALE
+        }
+      }
+
+      assert_raise TransportError, "Mock failed with ** (RuntimeError) Sample mock failure", fn ->
+        SampleClientUnresponding.push(request)
+      end
     end
   end
 end
