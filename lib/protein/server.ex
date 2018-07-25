@@ -81,14 +81,29 @@ defmodule Protein.Server do
           :ok
         end
 
+        # ...or with default response and metadata used for logging
+        def call(request = %Request{}) do
+          {:ok, %{request_id: "12345"}}
+        end
+
         # ...or with specific response
         def call(request = %Request{}) do
           {:ok, %Response{}}
         end
 
+        # ...or with specific response and metadata used for logging
+        def call(request = %Request{}) do
+          {:ok, %Response{}, %{request_id: "12345"}}
+        end
+
         # ...or with default error
         def call(request = %Request{}) do
           :error
+        end
+
+        # ...or with default error and metadata used for logging
+        def call(request = %Request{}) do
+          {:error, %{request_id: "12345"}}
         end
 
         # ...or with specific error code
@@ -113,6 +128,11 @@ defmodule Protein.Server do
             "Something went wrong",
             {:specific_arg_error, struct: "user", struct: "images", repeated: 0}
           ]}
+        end
+
+        # ...or with any of above error types with additional metadata used for logging
+        def call(request = %Request{}) do
+          {:error, error, %{request_id: "12345"}}
         end
       end
 
@@ -154,7 +174,7 @@ defmodule Protein.Server do
   end
 
   @doc false
-  def process(request_buf, service_opts) do
+  def process(request_buf, request_metadata, service_opts) do
     service_name = Keyword.fetch!(service_opts, :service_name)
     service_mod = Keyword.fetch!(service_opts, :service_mod)
     request_mod = Keyword.fetch!(service_opts, :request_mod)
@@ -163,12 +183,12 @@ defmodule Protein.Server do
 
     case request_type do
       :call ->
-        response = log_process(request_type, service_name, fn ->
-          process_service(service_mod, request_buf, request_mod, response_mod)
+        response = log_process(request_type, request_metadata, service_name, fn ->
+          process_service(service_mod, request_buf, request_metadata, request_mod, response_mod)
         end)
         ResponsePayload.encode(response)
       :push ->
-        log_process(:push, service_name, fn ->
+        log_process(:push, request_metadata, service_name, fn ->
           process_service(service_mod, request_buf, request_mod)
         end)
         nil
@@ -182,19 +202,70 @@ defmodule Protein.Server do
     |> service_mod.call()
   end
   @doc false
-  def process_service(service_mod, request_buf, request_mod, response_mod) do
-    case process_service(service_mod, request_buf, request_mod) do
-      :ok ->
-        {:ok, response_mod.encode(response_mod.new())}
-      {:ok, response_struct} ->
-        {:ok, response_mod.encode(response_struct)}
-      :error ->
-        {:error, [error: nil]}
-      {:error, errors} when is_list(errors) ->
-        {:error, Enum.map(errors, &normalize_error/1)}
-      {:error, error} ->
-        {:error, [normalize_error(error)]}
+  def process_service(service_mod, request_buf, request_metadata, request_mod, response_mod) do
+    normalized_call_result =
+      service_mod
+      |> process_service(request_buf, request_mod)
+      |> normalize_service_call_result(response_mod)
+
+    case normalized_call_result do
+      {:ok, response_struct, response_metadata} ->
+        {
+          :ok,
+          response_mod.encode(response_struct),
+          get_response_metadata_with_defaults(request_metadata, response_metadata)
+        }
+      {:error, errors, response_metadata} ->
+        {:error, errors, get_response_metadata_with_defaults(request_metadata, response_metadata)}
     end
+  end
+
+  # credo:disable-for-next-line
+  defp normalize_service_call_result(call_result, response_mod) do
+    case call_result do
+      :ok ->
+        {:ok, response_mod.new(), nil}
+      {:ok, %response_struct_mod{} = response_struct} when response_struct_mod == response_mod ->
+        {:ok, response_struct, nil}
+      {:ok, response_metadata} when is_map(response_metadata) ->
+        {:ok, response_mod.new(), response_metadata}
+      {:ok, response_struct, response_metadata} ->
+        {:ok, response_struct, response_metadata}
+      :error ->
+        {:error, [error: nil], nil}
+      {:error, response_metadata} when is_map(response_metadata) ->
+        {:error, [error: nil], response_metadata}
+      {:error, errors} when is_list(errors) ->
+        {:error, Enum.map(errors, &normalize_error/1), nil}
+      {:error, errors, response_metadata} when is_list(errors) ->
+        {:error, Enum.map(errors, &normalize_error/1), response_metadata}
+      {:error, error} ->
+        {:error, [normalize_error(error)], nil}
+      {:error, error, response_metadata} ->
+        {:error, [normalize_error(error)], response_metadata}
+    end
+  end
+
+  defp get_response_metadata_with_defaults(nil, nil) do
+    %{
+      request_id: Utils.generate_random_id,
+      timestamp: :os.system_time(:millisecond)
+    }
+  end
+
+  defp get_response_metadata_with_defaults(request_metadata, nil) do
+    %{
+      request_id: Map.get(request_metadata, :request_id),
+      timestamp: :os.system_time(:millisecond)
+    }
+  end
+
+  defp get_response_metadata_with_defaults(nil, response_metadata) do
+    Map.merge(get_response_metadata_with_defaults(nil, nil), response_metadata)
+  end
+
+  defp get_response_metadata_with_defaults(request_metadata, response_metadata) do
+    Map.merge(get_response_metadata_with_defaults(request_metadata, nil), response_metadata)
   end
 
   defp normalize_error(reason) when is_atom(reason) or is_binary(reason), do: {reason, nil}
@@ -207,20 +278,31 @@ defmodule Protein.Server do
     end
   end
 
-  defp log_process(kind, service_name, process_func) do
-    Logger.info(fn -> "Processing RPC #{kind}: #{service_name}" end)
+  defp log_process(kind, request_metadata = %{}, service_name, process_func) do
+    log_with_metadata(fn -> "Processing RPC #{kind}: #{service_name}" end, request_metadata)
+    log_request_transport_duration(request_metadata)
 
     start_time = :os.system_time(:millisecond)
     result = process_func.()
     duration_ms = :os.system_time(:millisecond) - start_time
     status_text = case {kind, result} do
       {:push, _} -> "Processed"
-      {:call, {:ok, _}} -> "Resolved"
+      {:call, {:ok, _, _}} -> "Resolved"
       {:call, _} -> "Rejected"
     end
 
-    Logger.info(fn -> "#{status_text} in #{duration_ms}ms" end)
+    log_with_metadata(fn -> "#{status_text} in #{duration_ms}ms" end, request_metadata)
 
     result
   end
+
+  defp log_with_metadata(log_entry, metadata = %{}) do
+    Logger.info(log_entry, Map.to_list(metadata))
+  end
+
+  defp log_request_transport_duration(request_metadata = %{timestamp: timestamp}) do
+    log_with_metadata(fn -> "Request transport duration: #{:os.system_time(:millisecond) - timestamp}ms" end, request_metadata)
+  end
+
+  defp log_request_transport_duration(_request_metadata), do: nil # ignore unless timestamp is set
 end
