@@ -91,7 +91,7 @@ defmodule Protein.AMQPAdapter.Server do
   end
 
   defp should_respond(nil, _meta), do: false
-  defp should_respond(_response, %{reply_to: :undefined} = _meta), do: false
+  defp should_respond(_response, _meta = %{reply_to: :undefined}), do: false
   defp should_respond(_response, _meta), do: true
 
   defp respond(response, chan, meta) do
