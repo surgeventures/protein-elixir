@@ -70,7 +70,9 @@ defmodule Protein.AMQPAdapter.Server do
     server_mod = Keyword.fetch!(opts, :server_mod)
 
     {response, error} = try_process(payload, server_mod)
-    respond(response, chan, meta)
+
+    if should_respond(response, meta), do: respond(response, chan, meta)
+
     Basic.ack(chan, meta.delivery_tag)
 
     if error do
@@ -88,7 +90,10 @@ defmodule Protein.AMQPAdapter.Server do
       {"ESRV", {exception, stacktrace}}
   end
 
-  defp respond(nil, _chan, _meta), do: nil
+  defp should_respond(nil, _meta), do: false
+  defp should_respond(_response, %{reply_to: :undefined} = _meta), do: false
+  defp should_respond(_response, _meta), do: true
+
   defp respond(response, chan, meta) do
     %{
       correlation_id: correlation_id,
