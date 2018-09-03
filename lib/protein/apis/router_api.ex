@@ -36,7 +36,7 @@ defmodule Protein.RouterAPI do
   - `Protein.HTTPAdapter`
 
   You may also use your own adapter module by passing it as first argument.
-    """
+  """
   defmacro transport(adapter, adapter_opts \\ []) do
     opts = Keyword.put(adapter_opts, :adapter, adapter)
 
@@ -69,7 +69,7 @@ defmodule Protein.RouterAPI do
     quote do
       service(
         proto: unquote(proto),
-        service_name: unquote(service_name),
+        service_name: unquote(service_name)
       )
     end
   end

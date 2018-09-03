@@ -45,9 +45,11 @@ defmodule Protein.AMQPAdapter.Server do
         chan
       :error ->
         reconnect_int = Utils.get_config(opts, :reconnect_interval, 5_000)
-        Logger.error(fn ->
-          "Connection to #{url} failed, reconnecting in #{reconnect_int}ms"
-        end)
+        error_message = "Connection to #{url} failed, reconnecting in #{reconnect_int}ms"
+        if custom_error_logger = Application.get_env(:protein, :custom_error_logger) do
+          custom_error_logger.(error_message)
+        end
+        Logger.error(error_message)
         :timer.sleep(reconnect_int)
         connect(opts)
     end
@@ -89,7 +91,7 @@ defmodule Protein.AMQPAdapter.Server do
   end
 
   defp should_respond(nil, _meta), do: false
-  defp should_respond(_response, %{reply_to: :undefined} = _meta), do: false
+  defp should_respond(_response, _meta = %{reply_to: :undefined}), do: false
   defp should_respond(_response, _meta), do: true
 
   defp respond(response, chan, meta) do
