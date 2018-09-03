@@ -3,7 +3,7 @@ defmodule Protein.TransportError do
   Describes an RPC call failure in the transport layer.
   """
 
-  alias Protein.{AMQPAdapter, HTTPAdapter}
+  alias Protein.{AMQPAdapter, HTTPAdapter, AMQPAdapter.Connection}
 
   defexception [:adapter, :context]
 
@@ -12,6 +12,9 @@ defmodule Protein.TransportError do
   end
   def message(%__MODULE__{adapter: AMQPAdapter, context: :service_error}) do
     "Failed to process the request"
+  end
+  def message(%__MODULE__{adapter: Connection, context: :no_amqp_connection}) do
+    "AMQP connection failed"
   end
   def message(%__MODULE__{adapter: HTTPAdapter, context: status_code}) do
     "HTTP request failed with code #{status_code}"
