@@ -1,11 +1,18 @@
 defmodule Protein.ResponsePayload do
   @moduledoc false
+  alias Protein.Utils
 
-  def encode({:ok, response}) do
-    Poison.encode!(%{"response_buf_b64" => Base.encode64(response)})
+  def encode({:ok, response, response_metadata}) do
+    Poison.encode!(%{
+      "response_metadata" => response_metadata,
+      "response_buf_b64" => Base.encode64(response)
+    })
   end
-  def encode({:error, errors}) do
-    Poison.encode!(%{"errors" => encode_errors(errors)})
+  def encode({:error, errors, response_metadata}) do
+    Poison.encode!(%{
+      "response_metadata" => response_metadata,
+      "errors" => encode_errors(errors)
+    })
   end
 
   defp encode_errors(errors) do
@@ -31,10 +38,14 @@ defmodule Protein.ResponsePayload do
 
   def decode(payload) do
     case Poison.decode!(payload) do
+      %{"errors" => errors, "response_metadata" => response_metadata} when is_list(errors) ->
+        {:error, decode_errors(errors), Utils.atomize_map_keys(response_metadata)}
       %{"errors" => errors} when is_list(errors) ->
-        {:error, decode_errors(errors)}
+        {:error, decode_errors(errors), %{}}
+      %{"response_buf_b64" => response_buf_b64, "response_metadata" => response_metadata} ->
+        {:ok, Base.decode64!(response_buf_b64), Utils.atomize_map_keys(response_metadata)}
       %{"response_buf_b64" => response_buf_b64} ->
-        {:ok, Base.decode64!(response_buf_b64)}
+        {:ok, Base.decode64!(response_buf_b64), %{}}
     end
   end
 

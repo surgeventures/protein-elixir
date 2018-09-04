@@ -64,6 +64,11 @@ defmodule Protein.Client do
       # ...or issue a push to non-responding service (recognized by lack of Response structure)
       RemoteRPC.push(request)
 
+      # for each of above methods you can pass additional metadata used for logging purposes
+      RemoteRPC.call(request, %{request_id: "12345"})
+      RemoteRPC.call!(request, %{request_id: "12345"})
+      RemoteRPC.push(request, %{request_id: "12345"})
+
   ### Macros and functions
 
   By invoking `use Protein.Client`, you include the following in your client module:
@@ -89,7 +94,7 @@ defmodule Protein.Client do
 
       defmodule MyProject.RemoteRPC.CreateUserMock do
         # with default response
-        def call(request = %Request{) do
+        def call(request = %Request{}) do
           :ok
         end
 
@@ -141,6 +146,7 @@ defmodule Protein.Client do
 
   """
 
+  require Logger
   alias Protein.{
     CallError,
     DummyServiceMock,
@@ -169,7 +175,7 @@ defmodule Protein.Client do
   end
 
   @doc false
-  def call(request_struct, service_opts, transport_opts) do
+  def call(request_struct, request_metadata, service_opts, transport_opts) do
     service_name = Keyword.fetch!(service_opts, :service_name)
     request_mod = Keyword.fetch!(service_opts, :request_mod)
     response_mod = Keyword.fetch!(service_opts, :response_mod)
@@ -180,41 +186,53 @@ defmodule Protein.Client do
     request_buf = request_mod.encode(request_struct)
 
     result =
-      call_via_mock(request_buf, request_mod, response_mod, mock_mod)
-      || call_via_adapter(service_name, request_buf, transport_opts)
+      call_via_mock(request_buf, request_metadata, request_mod, response_mod, mock_mod)
+      || call_via_adapter(service_name, request_buf, request_metadata, transport_opts)
 
     case result do
-      {:ok, response_buf} ->
+      {:ok, response_buf, _response_metadata} ->
         {:ok, response_mod.decode(response_buf)}
-      {:error, errors} ->
+      {:error, errors, _response_metadata} ->
         {:error, errors}
     end
   end
 
   @doc false
-  def call!(request_struct, service_opts, transport_opts) do
+  def call!(request_struct, request_metadata, service_opts, transport_opts) do
     request_struct
-    |> call(service_opts, transport_opts)
+    |> call(request_metadata, service_opts, transport_opts)
     |> handle_non_failing_response()
   end
 
-  defp call_via_mock(request_buf, request_mod, response_mod, mock_mod) do
+  defp call_via_mock(request_buf, request_metadata, request_mod, response_mod, mock_mod) do
     if Utils.mocking_enabled?() do
-      Server.process_service(mock_mod, request_buf, request_mod, response_mod)
+      Server.process_service(mock_mod, request_buf, request_metadata, request_mod, response_mod)
     end
   rescue
     error -> raise TransportError, adapter: :mock, context: error
   end
 
-  defp call_via_adapter(service_name, request_buf, opts) do
+  defp call_via_adapter(service_name, request_buf, request_metadata, opts) do
     {adapter, adapter_opts} = Keyword.pop(opts, :adapter)
-    request_payload = RequestPayload.encode(service_name, request_buf)
+    request_payload = RequestPayload.encode(service_name, request_buf, request_metadata)
+
+    log_with_metadata(fn -> "Calling RPC service: #{service_name}" end, request_metadata)
+
+    start_time = :os.system_time(:millisecond)
     response_payload =
       adapter
       |> Utils.resolve_adapter()
       |> apply(:call, [request_payload, adapter_opts])
+    end_time = :os.system_time(:millisecond)
+    duration_ms = end_time - start_time
 
-    ResponsePayload.decode(response_payload)
+    decoded_response = ResponsePayload.decode(response_payload)
+
+    {_status, _payload, response_metadata} = decoded_response
+    log_with_metadata(fn -> "Received RPC response in #{duration_ms}ms" end, response_metadata)
+    log_response_transport_duration(end_time, response_metadata)
+
+    decoded_response
   end
 
   defp handle_non_failing_response({:ok, response}), do: response
@@ -223,7 +241,7 @@ defmodule Protein.Client do
   end
 
   @doc false
-  def push(request_struct, service_opts, transport_opts) do
+  def push(request_struct, request_metadata, service_opts, transport_opts) do
     service_name = Keyword.fetch!(service_opts, :service_name)
     request_mod = Keyword.fetch!(service_opts, :request_mod)
     response_mod = Keyword.fetch!(service_opts, :response_mod)
@@ -233,8 +251,9 @@ defmodule Protein.Client do
 
     request_buf = request_mod.encode(request_struct)
 
+    log_with_metadata(fn -> "Pushing to RPC service: #{service_name}" end, request_metadata)
     push_via_mock(request_buf, request_mod, mock_mod)
-    || push_via_adapter(service_name, request_buf, transport_opts)
+    || push_via_adapter(service_name, request_buf, request_metadata, transport_opts)
 
     :ok
   end
@@ -253,12 +272,22 @@ defmodule Protein.Client do
     error -> raise TransportError, adapter: :mock, context: error
   end
 
-  defp push_via_adapter(service_name, request_buf, opts) do
+  defp push_via_adapter(service_name, request_buf, request_metadata, opts) do
     {adapter, adapter_opts} = Keyword.pop(opts, :adapter)
-    request_payload = RequestPayload.encode(service_name, request_buf)
+    request_payload = RequestPayload.encode(service_name, request_buf, request_metadata)
 
     adapter
     |> Utils.resolve_adapter()
     |> apply(:push, [request_payload, adapter_opts])
   end
+
+  defp log_with_metadata(log_entry, metadata = %{}) do
+    Logger.info(log_entry, Map.to_list(metadata))
+  end
+
+  defp log_response_transport_duration(end_time, response_metadata = %{timestamp: timestamp}) do
+    log_with_metadata(fn -> "Response transport duration: #{end_time - timestamp}ms" end, response_metadata)
+  end
+
+  defp log_response_transport_duration(_end_time, _response_metadata), do: nil # ignore unless timestamp is set
 end

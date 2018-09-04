@@ -10,31 +10,22 @@ defmodule Protein.ClientAPI do
       @doc """
       Calls a responding service that is expected to potentially reject the request.
       """
-      def call(request_struct) do
-        apply_client(request_struct, :call)
+      def call(request_struct, request_metadata \\ nil) do
+        apply_client(request_struct, request_metadata, :call)
       end
 
       @doc """
       Calls a responding service that is not expected to reject the request.
       """
-      def call!(request_struct) do
-        apply_client(request_struct, :call!)
+      def call!(request_struct, request_metadata \\ nil) do
+        apply_client(request_struct, request_metadata, :call!)
       end
 
       @doc """
       Pushes a request to a non-responding service.
       """
-      def push(request_struct) do
-        apply_client(request_struct, :push)
-      end
-
-      defp apply_client(request_struct = %{__struct__: request_mod}, method) do
-        transport_opts = get_transport_opts()
-        service_opts = __MODULE__.__service_opts__(request_mod)
-
-        ensure_connection_started(transport_opts)
-
-        apply(Protein.Client, method, [request_struct, service_opts, transport_opts])
+      def push(request_struct, request_metadata \\ nil) do
+        apply_client(request_struct, request_metadata, :push)
       end
 
       def get_transport_opts do
@@ -64,6 +55,31 @@ defmodule Protein.ClientAPI do
             {:error, error} -> raise("Error starting client: #{inspect error}")
           end
         end
+      end
+
+      defp get_request_metadata_with_defaults(nil) do
+        %{
+          request_id: Utils.generate_random_id,
+          timestamp: :os.system_time(:millisecond)
+        }
+      end
+
+      defp get_request_metadata_with_defaults(request_metadata = %{}) do
+        Map.merge(get_request_metadata_with_defaults(nil), request_metadata)
+      end
+
+      defp apply_client(request_struct = %{__struct__: request_mod}, request_metadata, method) do
+        transport_opts = get_transport_opts()
+        service_opts = __MODULE__.__service_opts__(request_mod)
+        request_metadata = get_request_metadata_with_defaults(request_metadata)
+
+        ensure_connection_started(transport_opts)
+
+        apply(
+          Protein.Client,
+          method,
+          [request_struct, request_metadata, service_opts, transport_opts]
+        )
       end
     end
   end

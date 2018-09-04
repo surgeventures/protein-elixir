@@ -17,10 +17,10 @@ defmodule Protein.ServerAPI do
       transport layer) or nil (for non-responding services).
       """
       def process(request) do
-        {service_name, request_buf} = RequestPayload.decode(request)
+        {service_name, request_buf, request_metadata} = RequestPayload.decode(request)
         service_opts = __MODULE__.__service_opts__(service_name)
 
-        Server.process(request_buf, service_opts)
+        Server.process(request_buf, request_metadata, service_opts)
       end
     end
   end
