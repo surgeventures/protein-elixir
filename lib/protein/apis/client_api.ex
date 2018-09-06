@@ -44,9 +44,11 @@ defmodule Protein.ClientAPI do
         connection_mod = Utils.resolve_adapter_connection_mod(adapter_mod)
         connection_name = :"#{__MODULE__}.Connection"
 
-        Keyword.merge(transport_opts,
+        Keyword.merge(
+          transport_opts,
           connection_mod: connection_mod,
-          connection_name: connection_name)
+          connection_name: connection_name
+        )
       end
 
       def ensure_connection_started(opts) do
@@ -61,7 +63,7 @@ defmodule Protein.ClientAPI do
           case Supervisor.start_child(pid, spec) do
             {:ok, _} -> nil
             {:error, {:already_started, _}} -> nil
-            {:error, error} -> raise("Error starting client: #{inspect error}")
+            {:error, error} -> raise("Error starting client: #{inspect(error)}")
           end
         end
       end
@@ -72,20 +74,20 @@ defmodule Protein.ClientAPI do
   Calls a responding service that is expected to potentially reject the request.
   """
   def call(_request_struct) do
-    raise("This function must be called on modules that use #{inspect __MODULE__}")
+    raise("This function must be called on modules that use #{inspect(__MODULE__)}")
   end
 
   @doc """
   Calls a responding service that is not expected to reject the request.
   """
   def call!(_request_struct) do
-    raise("This function must be called on modules that use #{inspect __MODULE__}")
+    raise("This function must be called on modules that use #{inspect(__MODULE__)}")
   end
 
   @doc """
   Pushes a request to a non-responding service.
   """
   def push(_request_struct) do
-    raise("This function must be called on modules that use #{inspect __MODULE__}")
+    raise("This function must be called on modules that use #{inspect(__MODULE__)}")
   end
 end

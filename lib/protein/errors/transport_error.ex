@@ -10,12 +10,15 @@ defmodule Protein.TransportError do
   def message(%__MODULE__{adapter: AMQPAdapter, context: {:timeout, duration}}) do
     "Timeout after #{duration}ms"
   end
+
   def message(%__MODULE__{adapter: AMQPAdapter, context: :service_error}) do
     "Failed to process the request"
   end
+
   def message(%__MODULE__{adapter: HTTPAdapter, context: status_code}) do
     "HTTP request failed with code #{status_code}"
   end
+
   def message(%__MODULE__{adapter: :mock, context: error}) do
     "Mock failed with #{Exception.format_banner(:error, error)}"
   end

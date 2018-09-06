@@ -15,7 +15,7 @@ defmodule Protein.UtilsTest do
 
     test "gets system value" do
       System.put_env("SYSTEM_ENV_NAME", "system_env_value")
-      opts = [foo: {:system , "SYSTEM_ENV_NAME"}]
+      opts = [foo: {:system, "SYSTEM_ENV_NAME"}]
       assert Utils.get_config(opts, :foo, 0) == "system_env_value"
     end
   end

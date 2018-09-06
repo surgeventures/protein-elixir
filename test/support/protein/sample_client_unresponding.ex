@@ -3,13 +3,15 @@ defmodule Protein.SampleClientUnresponding do
 
   use Protein.Client
 
-  transport :amqp,
+  transport(
+    :amqp,
     url: "amqp://example.com",
     queue: "remote_rpc",
     timeout: 15_000,
     reconnect_interval: 1_000
+  )
 
-  proto :create_user_unresponding
+  proto(:create_user_unresponding)
 end
 
 defmodule Protein.SampleClientUnresponding.CreateUserUnrespondingMock do

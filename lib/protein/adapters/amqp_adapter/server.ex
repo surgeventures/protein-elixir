@@ -19,10 +19,12 @@ defmodule Protein.AMQPAdapter.Server do
   def handle_info({:basic_consume_ok, _meta}, state), do: {:noreply, state}
   def handle_info({:basic_cancel, _meta}, state), do: {:stop, :normal, state}
   def handle_info({:basic_cancel_ok, _meta}, state), do: {:noreply, state}
+
   def handle_info({:basic_deliver, payload, meta}, state = {chan, opts}) do
-    spawn fn -> consume(chan, opts, meta, payload) end
+    spawn(fn -> consume(chan, opts, meta, payload) end)
     {:noreply, state}
   end
+
   def handle_info({:DOWN, _, :process, _pid, _reason}, {_, opts}) do
     chan = connect(opts)
     {:noreply, {chan, opts}}
@@ -38,17 +40,25 @@ defmodule Protein.AMQPAdapter.Server do
         Process.monitor(conn.pid)
         Basic.qos(chan, prefetch_count: concurrency)
         Basic.consume(chan, queue)
+
         Logger.info(fn ->
           server_mod = Keyword.fetch!(opts, :server_mod)
-          "Serving #{inspect(server_mod)} with AMQP from #{queue} at #{url} (concurrency: #{concurrency})"
+
+          "Serving #{inspect(server_mod)} with AMQP from #{queue} at #{url} (concurrency: #{
+            concurrency
+          })"
         end)
+
         chan
+
       :error ->
         reconnect_int = Utils.get_config(opts, :reconnect_interval, 5_000)
         error_message = "Connection to #{url} failed, reconnecting in #{reconnect_int}ms"
+
         if custom_error_logger = Application.get_env(:protein, :custom_error_logger) do
           custom_error_logger.(error_message)
         end
+
         Logger.error(error_message)
         :timer.sleep(reconnect_int)
         connect(opts)
@@ -61,6 +71,7 @@ defmodule Protein.AMQPAdapter.Server do
         {:ok, chan} = Channel.open(conn)
         Queue.declare(chan, queue)
         {:ok, conn, chan}
+
       {:error, _} ->
         :error
     end
@@ -86,7 +97,7 @@ defmodule Protein.AMQPAdapter.Server do
     {response, nil}
   rescue
     exception ->
-      stacktrace = System.stacktrace
+      stacktrace = System.stacktrace()
       {"ESRV", {exception, stacktrace}}
   end
 

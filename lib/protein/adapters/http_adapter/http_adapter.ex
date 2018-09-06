@@ -56,6 +56,7 @@ defmodule Protein.HTTPAdapter do
 
   defp make_http_request(url, body, headers) do
     response = HTTPoison.post!(url, body, headers)
+
     if response.status_code != 200 do
       raise TransportError, adapter: __MODULE__, context: response.status_code
     end

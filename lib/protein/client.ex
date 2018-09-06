@@ -149,7 +149,7 @@ defmodule Protein.Client do
     Server,
     Transport,
     TransportError,
-    Utils,
+    Utils
   }
 
   defmacro __using__(_) do
@@ -175,17 +175,18 @@ defmodule Protein.Client do
     response_mod = Keyword.fetch!(service_opts, :response_mod)
     mock_mod = Keyword.fetch!(service_opts, :mock_mod)
 
-    unless Code.ensure_loaded?(response_mod), do: raise "Called to non-responding service"
+    unless Code.ensure_loaded?(response_mod), do: raise("Called to non-responding service")
 
     request_buf = request_mod.encode(request_struct)
 
     result =
-      call_via_mock(request_buf, request_mod, response_mod, mock_mod)
-      || call_via_adapter(service_name, request_buf, transport_opts)
+      call_via_mock(request_buf, request_mod, response_mod, mock_mod) ||
+        call_via_adapter(service_name, request_buf, transport_opts)
 
     case result do
       {:ok, response_buf} ->
         {:ok, response_mod.decode(response_buf)}
+
       {:error, errors} ->
         {:error, errors}
     end
@@ -209,6 +210,7 @@ defmodule Protein.Client do
   defp call_via_adapter(service_name, request_buf, opts) do
     {adapter, adapter_opts} = Keyword.pop(opts, :adapter)
     request_payload = RequestPayload.encode(service_name, request_buf)
+
     response_payload =
       adapter
       |> Utils.resolve_adapter()
@@ -218,6 +220,7 @@ defmodule Protein.Client do
   end
 
   defp handle_non_failing_response({:ok, response}), do: response
+
   defp handle_non_failing_response({:error, errors}) do
     raise CallError, errors: errors
   end
@@ -229,23 +232,24 @@ defmodule Protein.Client do
     response_mod = Keyword.fetch!(service_opts, :response_mod)
     mock_mod = Keyword.fetch!(service_opts, :mock_mod)
 
-    if Code.ensure_loaded?(response_mod), do: raise "Pushed to responding service"
+    if Code.ensure_loaded?(response_mod), do: raise("Pushed to responding service")
 
     request_buf = request_mod.encode(request_struct)
 
-    push_via_mock(request_buf, request_mod, mock_mod)
-    || push_via_adapter(service_name, request_buf, transport_opts)
+    push_via_mock(request_buf, request_mod, mock_mod) ||
+      push_via_adapter(service_name, request_buf, transport_opts)
 
     :ok
   end
 
   defp push_via_mock(request_buf, request_mod, mock_mod) do
     if Utils.mocking_enabled?() do
-      mock_or_default_mod = if Code.ensure_loaded?(mock_mod) do
-        mock_mod
-      else
-        DummyServiceMock
-      end
+      mock_or_default_mod =
+        if Code.ensure_loaded?(mock_mod) do
+          mock_mod
+        else
+          DummyServiceMock
+        end
 
       Server.process_service(mock_or_default_mod, request_buf, request_mod)
     end

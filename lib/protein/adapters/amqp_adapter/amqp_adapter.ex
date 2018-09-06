@@ -52,9 +52,12 @@ defmodule Protein.AMQPAdapter do
 
     {chan, response_queue} = get_channel_and_response_queue(connection_name)
     correlation_id = generate_request_id()
-    opts = put_expiration([
-      reply_to: response_queue,
-      correlation_id: correlation_id], timeout)
+
+    opts =
+      put_expiration(
+        [reply_to: response_queue, correlation_id: correlation_id],
+        timeout
+      )
 
     send_request(chan, queue, request, opts)
     wait_for_response(connection_name, correlation_id, timeout)
@@ -83,6 +86,7 @@ defmodule Protein.AMQPAdapter do
     receive do
       {:response, "ESRV"} ->
         raise TransportError, adapter: __MODULE__, context: :service_error
+
       {:response, response} ->
         response
     after

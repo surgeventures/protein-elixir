@@ -11,11 +11,12 @@ defmodule Protein.RouterAPI do
       import Protein.RouterAPI
 
       def __transport_opts__ do
-        dsl_opts = try do
-          apply(__MODULE__, :__transport_opts_dsl__, [])
-        rescue
-          UndefinedFunctionError -> []
-        end
+        dsl_opts =
+          try do
+            apply(__MODULE__, :__transport_opts_dsl__, [])
+          rescue
+            UndefinedFunctionError -> []
+          end
 
         config_opts = Confix.get_in([__MODULE__, :transport]) || []
 
@@ -51,20 +52,22 @@ defmodule Protein.RouterAPI do
   Supports either atom or binary name. Check out moduledoc for `Protein.Client` for more info.
   """
   defmacro proto(name) do
-    {proto, service_name} = case name do
-      atom when is_atom(atom) ->
-        {
-          [from: Path.expand("../proto/#{name}.proto", __CALLER__.file)],
-          to_string(name)
-        }
-      string when is_binary(string) ->
-        {
-          [from: string],
-          string
-          |> Path.basename
-          |> Path.rootname
-        }
-    end
+    {proto, service_name} =
+      case name do
+        atom when is_atom(atom) ->
+          {
+            [from: Path.expand("../proto/#{name}.proto", __CALLER__.file)],
+            to_string(name)
+          }
+
+        string when is_binary(string) ->
+          {
+            [from: string],
+            string
+            |> Path.basename()
+            |> Path.rootname()
+          }
+      end
 
     quote do
       service(
@@ -100,40 +103,50 @@ defmodule Protein.RouterAPI do
 
     service_name = Keyword.fetch!(opts, :service_name)
 
-    proto_mod = case Keyword.fetch(opts, :proto_mod) do
-      {:ok, value} ->
-        Macro.expand(value, __CALLER__)
-      :error ->
-        :"#{__CALLER__.module}.#{Macro.camelize(to_string(service_name))}"
-    end
+    proto_mod =
+      case Keyword.fetch(opts, :proto_mod) do
+        {:ok, value} ->
+          Macro.expand(value, __CALLER__)
 
-    service_mod = case Keyword.fetch(opts, :service_mod) do
-      {:ok, value} ->
-        Macro.expand(value, __CALLER__)
-      :error ->
-        :"#{proto_mod}Service"
-    end
+        :error ->
+          :"#{__CALLER__.module}.#{Macro.camelize(to_string(service_name))}"
+      end
 
-    request_mod = case Keyword.fetch(opts, :request_mod) do
-      {:ok, value} ->
-        Macro.expand(value, __CALLER__)
-      :error ->
-        :"#{proto_mod}.Request"
-    end
+    service_mod =
+      case Keyword.fetch(opts, :service_mod) do
+        {:ok, value} ->
+          Macro.expand(value, __CALLER__)
 
-    response_mod = case Keyword.fetch(opts, :response_mod) do
-      {:ok, value} ->
-        Macro.expand(value, __CALLER__)
-      :error ->
-        :"#{proto_mod}.Response"
-    end
+        :error ->
+          :"#{proto_mod}Service"
+      end
 
-    mock_mod = case Keyword.fetch(opts, :mock_mod) do
-      {:ok, value} ->
-        Macro.expand(value, __CALLER__)
-      :error ->
-        :"#{proto_mod}Mock"
-    end
+    request_mod =
+      case Keyword.fetch(opts, :request_mod) do
+        {:ok, value} ->
+          Macro.expand(value, __CALLER__)
+
+        :error ->
+          :"#{proto_mod}.Request"
+      end
+
+    response_mod =
+      case Keyword.fetch(opts, :response_mod) do
+        {:ok, value} ->
+          Macro.expand(value, __CALLER__)
+
+        :error ->
+          :"#{proto_mod}.Response"
+      end
+
+    mock_mod =
+      case Keyword.fetch(opts, :mock_mod) do
+        {:ok, value} ->
+          Macro.expand(value, __CALLER__)
+
+        :error ->
+          :"#{proto_mod}Mock"
+      end
 
     service_opts = [
       service_name: service_name,
@@ -141,7 +154,7 @@ defmodule Protein.RouterAPI do
       service_mod: service_mod,
       request_mod: request_mod,
       response_mod: response_mod,
-      mock_mod: mock_mod,
+      mock_mod: mock_mod
     ]
 
     quote do

@@ -4,6 +4,7 @@ defmodule Protein.ResponsePayload do
   def encode({:ok, response}) do
     Poison.encode!(%{"response_buf_b64" => Base.encode64(response)})
   end
+
   def encode({:error, errors}) do
     Poison.encode!(%{"errors" => encode_errors(errors)})
   end
@@ -25,6 +26,7 @@ defmodule Protein.ResponsePayload do
   defp encode_error_pointer(pointer) when is_list(pointer) do
     Enum.map(pointer, &encode_error_pointer_item/1)
   end
+
   defp encode_error_pointer(_), do: nil
 
   defp encode_error_pointer_item({type, key}), do: [to_string(type), key]
@@ -33,6 +35,7 @@ defmodule Protein.ResponsePayload do
     case Poison.decode!(payload) do
       %{"errors" => errors} when is_list(errors) ->
         {:error, decode_errors(errors)}
+
       %{"response_buf_b64" => response_buf_b64} ->
         {:ok, Base.decode64!(response_buf_b64)}
     end
@@ -53,6 +56,7 @@ defmodule Protein.ResponsePayload do
   defp decode_error_pointer(%{"pointer" => pointer}) when is_list(pointer) do
     Enum.map(pointer, &decode_error_pointer_item/1)
   end
+
   defp decode_error_pointer(_), do: nil
 
   defp decode_error_pointer_item(["struct", key]), do: {:struct, key}

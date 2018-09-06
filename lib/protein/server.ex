@@ -141,11 +141,13 @@ defmodule Protein.Server do
 
       defp get_server_children do
         transport_opts = __transport_opts__()
+
         transport_server_mod =
           transport_opts
           |> Keyword.fetch!(:adapter)
           |> Utils.resolve_adapter()
           |> Utils.resolve_adapter_server_mod()
+
         transport_server_opts = Keyword.put(transport_opts, :server_mod, __MODULE__)
 
         [{transport_server_mod, transport_server_opts}]
@@ -163,14 +165,18 @@ defmodule Protein.Server do
 
     case request_type do
       :call ->
-        response = log_process(request_type, service_name, fn ->
-          process_service(service_mod, request_buf, request_mod, response_mod)
-        end)
+        response =
+          log_process(request_type, service_name, fn ->
+            process_service(service_mod, request_buf, request_mod, response_mod)
+          end)
+
         ResponsePayload.encode(response)
+
       :push ->
         log_process(:push, service_name, fn ->
           process_service(service_mod, request_buf, request_mod)
         end)
+
         nil
     end
   end
@@ -181,17 +187,22 @@ defmodule Protein.Server do
     |> request_mod.decode()
     |> service_mod.call()
   end
+
   @doc false
   def process_service(service_mod, request_buf, request_mod, response_mod) do
     case process_service(service_mod, request_buf, request_mod) do
       :ok ->
         {:ok, response_mod.encode(response_mod.new())}
+
       {:ok, response_struct} ->
         {:ok, response_mod.encode(response_struct)}
+
       :error ->
         {:error, [error: nil]}
+
       {:error, errors} when is_list(errors) ->
         {:error, Enum.map(errors, &normalize_error/1)}
+
       {:error, error} ->
         {:error, [normalize_error(error)]}
     end
@@ -213,11 +224,13 @@ defmodule Protein.Server do
     start_time = :os.system_time(:millisecond)
     result = process_func.()
     duration_ms = :os.system_time(:millisecond) - start_time
-    status_text = case {kind, result} do
-      {:push, _} -> "Processed"
-      {:call, {:ok, _}} -> "Resolved"
-      {:call, _} -> "Rejected"
-    end
+
+    status_text =
+      case {kind, result} do
+        {:push, _} -> "Processed"
+        {:call, {:ok, _}} -> "Resolved"
+        {:call, _} -> "Rejected"
+      end
 
     Logger.info(fn -> "#{status_text} in #{duration_ms}ms" end)
 

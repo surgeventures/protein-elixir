@@ -35,6 +35,6 @@ defmodule Protein.ServerAPI do
   transport layer) or nil (for non-responding services).
   """
   def process(_request) do
-    raise("This function must be called on modules that use #{inspect __MODULE__}")
+    raise("This function must be called on modules that use #{inspect(__MODULE__)}")
   end
 end

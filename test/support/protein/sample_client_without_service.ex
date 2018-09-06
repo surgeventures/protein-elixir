@@ -3,5 +3,5 @@ defmodule Protein.SampleClientWithoutService do
 
   use Protein.Client
 
-  transport __MODULE__.Adapter, x: "y"
+  transport(__MODULE__.Adapter, x: "y")
 end

@@ -2,12 +2,14 @@ defmodule Protein.ClientTest do
   use ExUnit.Case, async: false
   import Mock
   alias Mix.Config
+
   alias Protein.{
     CallError,
     SampleClient,
     SampleClientUnresponding,
-    TransportError,
+    TransportError
   }
+
   alias Protein.SampleClient.CreateUser
   alias Protein.SampleClientUnresponding.CreateUserUnresponding
   alias Protein.SampleClientWithCustomAdapter
@@ -22,13 +24,14 @@ defmodule Protein.ClientTest do
       }
 
       assert {:ok, response} = SampleClient.call(request)
+
       assert response == %CreateUser.Response{
-        user: %CreateUser.Response.User{
-          admin: false,
-          id: 1,
-          name: "some guy"
-        }
-      }
+               user: %CreateUser.Response.User{
+                 admin: false,
+                 id: 1,
+                 name: "some guy"
+               }
+             }
     end
 
     test "failure" do
@@ -59,12 +62,12 @@ defmodule Protein.ClientTest do
       }
 
       assert SampleClient.call!(request) == %CreateUser.Response{
-        user: %CreateUser.Response.User{
-          admin: false,
-          id: 1,
-          name: "some guy"
-        }
-      }
+               user: %CreateUser.Response.User{
+                 admin: false,
+                 id: 1,
+                 name: "some guy"
+               }
+             }
     end
 
     test "success with :ok" do
@@ -137,8 +140,9 @@ defmodule Protein.ClientTest do
         }
       }
 
-      message = ":not_unique (at [Access.key!(:user), Access.key!(:photo_ids), Access.at(1)]), " <>
-                ":not_unique (at [Access.key!(:user), Access.key!(:photo_ids), Access.at(2)])"
+      message =
+        ":not_unique (at [Access.key!(:user), Access.key!(:photo_ids), Access.at(1)]), " <>
+          ":not_unique (at [Access.key!(:user), Access.key!(:photo_ids), Access.at(2)])"
 
       assert_raise CallError, message, fn ->
         SampleClient.call!(request)
@@ -154,8 +158,9 @@ defmodule Protein.ClientTest do
         }
       }
 
-      message = ":forbidden " <>
-                "(at [Access.key!(:user), Access.key!(:permissions), Access.key!(\"admin\")])"
+      message =
+        ":forbidden " <>
+          "(at [Access.key!(:user), Access.key!(:permissions), Access.key!(\"admin\")])"
 
       assert_raise CallError, message, fn ->
         SampleClient.call!(request)
@@ -171,9 +176,11 @@ defmodule Protein.ClientTest do
     end
 
     test "custom adapter error with proto macro" do
-      Config.persist(protein: [
-        mocking_enabled: false
-      ])
+      Config.persist(
+        protein: [
+          mocking_enabled: false
+        ]
+      )
 
       request = %SampleClientWithCustomAdapter.Empty.Request{}
 
@@ -181,15 +188,19 @@ defmodule Protein.ClientTest do
         SampleClientWithCustomAdapter.call!(request)
       end
     after
-      Config.persist(protein: [
-        mocking_enabled: true
-      ])
+      Config.persist(
+        protein: [
+          mocking_enabled: true
+        ]
+      )
     end
 
     test "custom adapter error with service macro" do
-      Config.persist(protein: [
-        mocking_enabled: false
-      ])
+      Config.persist(
+        protein: [
+          mocking_enabled: false
+        ]
+      )
 
       request = %SampleClientWithCustomAdapter.EmptyService.Request{}
 
@@ -197,15 +208,19 @@ defmodule Protein.ClientTest do
         SampleClientWithCustomAdapter.call!(request)
       end
     after
-      Config.persist(protein: [
-        mocking_enabled: true
-      ])
+      Config.persist(
+        protein: [
+          mocking_enabled: true
+        ]
+      )
     end
 
     test "HTTP adapter success" do
-      Config.persist(protein: [
-        mocking_enabled: false
-      ])
+      Config.persist(
+        protein: [
+          mocking_enabled: false
+        ]
+      )
 
       mocked_post = fn _, _, _ ->
         response_payload = %{
@@ -213,11 +228,13 @@ defmodule Protein.ClientTest do
             %{
               "reason" => ":some_code",
               "pointer" => [["struct", "user"], ["repeated", 0], ["map", "param"]]
-            }, %{
+            },
+            %{
               "reason" => "some error"
             }
           ]
         }
+
         response_body = Poison.encode!(response_payload)
 
         %{
@@ -228,27 +245,31 @@ defmodule Protein.ClientTest do
 
       request = %CreateUser.Request{}
 
-      with_mock HTTPoison, [post!: mocked_post] do
+      with_mock HTTPoison, post!: mocked_post do
         response = SampleClient.call(request)
 
         assert response == {
-          :error,
-          [
-            {:some_code, [struct: "user", repeated: 0, map: "param"]},
-            {"some error", nil}
-          ]
-        }
+                 :error,
+                 [
+                   {:some_code, [struct: "user", repeated: 0, map: "param"]},
+                   {"some error", nil}
+                 ]
+               }
       end
     after
-      Config.persist(protein: [
-        mocking_enabled: true
-      ])
+      Config.persist(
+        protein: [
+          mocking_enabled: true
+        ]
+      )
     end
 
     test "HTTP adapter error" do
-      Config.persist(protein: [
-        mocking_enabled: false
-      ])
+      Config.persist(
+        protein: [
+          mocking_enabled: false
+        ]
+      )
 
       request = %CreateUser.Request{}
 
@@ -256,9 +277,11 @@ defmodule Protein.ClientTest do
         SampleClient.call!(request)
       end
     after
-      Config.persist(protein: [
-        mocking_enabled: true
-      ])
+      Config.persist(
+        protein: [
+          mocking_enabled: true
+        ]
+      )
     end
   end
 
