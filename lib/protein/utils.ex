@@ -31,4 +31,18 @@ defmodule Protein.Utils do
   def resolve_adapter_connection_mod(adapter_mod) do
     :"#{adapter_mod}.Connection"
   end
+
+  def generate_random_id do
+    binary = <<
+      System.system_time(:nanoseconds)::64,
+      :erlang.phash2({node(), self()}, 16_777_216)::24,
+      :erlang.unique_integer()::32
+    >>
+
+    Base.hex_encode32(binary, case: :lower)
+  end
+
+  def atomize_map_keys(map) do
+    Map.new(map, fn {key, value} -> {String.to_atom(key), value} end)
+  end
 end

@@ -89,7 +89,7 @@ defmodule Protein.Client do
 
       defmodule MyProject.RemoteRPC.CreateUserMock do
         # with default response
-        def call(request = %Request{) do
+        def call(request = %Request{}) do
           :ok
         end
 
@@ -140,6 +140,8 @@ defmodule Protein.Client do
   silently drop it without throwing an error.
 
   """
+
+  require Logger
 
   alias Protein.{
     CallError,
@@ -201,7 +203,16 @@ defmodule Protein.Client do
 
   defp call_via_mock(request_buf, request_mod, response_mod, mock_mod) do
     if Utils.mocking_enabled?() do
-      Server.process_service(mock_mod, request_buf, request_mod, response_mod)
+      {status, response_payload, _response_metadata} =
+        Server.process_service(
+          mock_mod,
+          request_buf,
+          generate_request_metadata(nil),
+          request_mod,
+          response_mod
+        )
+
+      {status, response_payload}
     end
   rescue
     error -> raise TransportError, adapter: :mock, context: error
@@ -209,14 +220,32 @@ defmodule Protein.Client do
 
   defp call_via_adapter(service_name, request_buf, opts) do
     {adapter, adapter_opts} = Keyword.pop(opts, :adapter)
-    request_payload = RequestPayload.encode(service_name, request_buf)
+    request_metadata = generate_request_metadata(service_name)
+    request_payload = RequestPayload.encode(service_name, request_buf, request_metadata)
+
+    log_with_metadata(fn -> "Calling RPC service: #{service_name}" end, request_metadata)
+
+    start_time = :os.system_time(:millisecond)
 
     response_payload =
       adapter
       |> Utils.resolve_adapter()
       |> apply(:call, [request_payload, adapter_opts])
 
-    ResponsePayload.decode(response_payload)
+    response_arrival_timestamp = :os.system_time(:millisecond)
+    duration_ms = response_arrival_timestamp - start_time
+
+    decoded_response = ResponsePayload.decode(response_payload)
+
+    {status, payload, response_metadata} = decoded_response
+
+    response_metadata =
+      Map.put(response_metadata, :response_arrival_timestamp, response_arrival_timestamp)
+
+    log_with_metadata(fn -> "Received RPC response in #{duration_ms}ms" end, response_metadata)
+    log_response_transport_duration(response_arrival_timestamp, response_metadata)
+
+    {status, payload}
   end
 
   defp handle_non_failing_response({:ok, response}), do: response
@@ -259,10 +288,37 @@ defmodule Protein.Client do
 
   defp push_via_adapter(service_name, request_buf, opts) do
     {adapter, adapter_opts} = Keyword.pop(opts, :adapter)
-    request_payload = RequestPayload.encode(service_name, request_buf)
+    request_metadata = generate_request_metadata(service_name)
+    request_payload = RequestPayload.encode(service_name, request_buf, request_metadata)
+
+    log_with_metadata(fn -> "Pushing to RPC service: #{service_name}" end, request_metadata)
 
     adapter
     |> Utils.resolve_adapter()
     |> apply(:push, [request_payload, adapter_opts])
+  end
+
+  defp log_with_metadata(log_entry, metadata = %{}) do
+    Logger.info(log_entry, Map.to_list(metadata))
+  end
+
+  defp log_response_transport_duration(
+         end_time,
+         response_metadata = %{response_timestamp: response_timestamp}
+       ) do
+    log_with_metadata(
+      fn -> "Response transport duration: #{end_time - response_timestamp}ms" end,
+      response_metadata
+    )
+  end
+
+  defp log_response_transport_duration(_end_time, _response_metadata), do: nil
+
+  defp generate_request_metadata(service_name) do
+    %{
+      service_name: service_name,
+      request_id: Utils.generate_random_id(),
+      request_timestamp: :os.system_time(:millisecond)
+    }
   end
 end
