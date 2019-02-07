@@ -21,7 +21,8 @@ defmodule Protein.HTTPAdapter do
 
         transport :http,
           url: "https://app.example.com/rpc",
-          secret: "remote-rpc-secret"
+          secret: "remote-rpc-secret",
+          timeout: 5_000
 
         # ...
       end
@@ -41,9 +42,10 @@ defmodule Protein.HTTPAdapter do
   def call(request_payload, opts) do
     url = Utils.get_config!(opts, :url)
     secret = Utils.get_config!(opts, :secret)
+    timeout = Utils.get_config(opts, :timeout, 5_000)
 
     headers = build_headers(secret)
-    response_body = make_http_request(url, request_payload, headers)
+    response_body = make_http_request(url, request_payload, headers, timeout)
 
     response_body
   end
@@ -54,8 +56,8 @@ defmodule Protein.HTTPAdapter do
     ]
   end
 
-  defp make_http_request(url, body, headers) do
-    response = HTTPoison.post!(url, body, headers)
+  defp make_http_request(url, body, headers, timeout) do
+    response = HTTPoison.post!(url, body, headers, recv_timeout: timeout)
 
     if response.status_code != 200 do
       raise TransportError, adapter: __MODULE__, context: response.status_code

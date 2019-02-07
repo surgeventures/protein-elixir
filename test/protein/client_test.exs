@@ -222,7 +222,7 @@ defmodule Protein.ClientTest do
         ]
       )
 
-      mocked_post = fn _, _, _ ->
+      mocked_post = fn _, _, _, _ ->
         response_payload = %{
           "errors" => [
             %{
