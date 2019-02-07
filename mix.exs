@@ -4,7 +4,7 @@ defmodule Protein.Mixfile do
   def project do
     [
       app: :protein,
-      version: "0.12.0",
+      version: "0.13.0",
       elixir: "~> 1.4",
       elixirc_paths: elixirc_paths(Mix.env()),
       build_embedded: Mix.env() == :prod,
