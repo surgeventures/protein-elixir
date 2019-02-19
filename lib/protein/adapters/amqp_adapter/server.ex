@@ -25,7 +25,7 @@ defmodule Protein.AMQPAdapter.Server do
 
   def wait_for_all_processes(running_processes_count) do
     receive do
-      :process_finished -> wait_for_all_processes(running_processes_count - 1)
+      {:DOWN, _, :process, _, :normal} -> wait_for_all_processes(running_processes_count - 1)
       _ -> wait_for_all_processes(running_processes_count)
     end
   end
@@ -35,8 +35,8 @@ defmodule Protein.AMQPAdapter.Server do
   def handle_info({:basic_cancel_ok, _meta}, state), do: {:noreply, state}
 
   def handle_info({:basic_deliver, payload, meta}, {chan, opts, processes}) do
-    parent_pid = self()
-    spawn(fn -> consume(chan, opts, meta, payload, parent_pid) end)
+    pid = spawn(fn -> consume(chan, opts, meta, payload) end)
+    Process.monitor(pid)
     {:noreply, {chan, opts, processes + 1}}
   end
 
@@ -92,7 +92,7 @@ defmodule Protein.AMQPAdapter.Server do
     end
   end
 
-  defp consume(chan, opts, meta, payload, parent_pid) do
+  defp consume(chan, opts, meta, payload) do
     server_mod = Keyword.fetch!(opts, :server_mod)
 
     {response, error} = try_process(payload, server_mod)
@@ -100,7 +100,6 @@ defmodule Protein.AMQPAdapter.Server do
     if should_respond(response, meta), do: respond(response, chan, meta)
 
     Basic.ack(chan, meta.delivery_tag)
-    send(parent_pid, :process_finished)
 
     if error do
       {exception, stacktrace} = error
