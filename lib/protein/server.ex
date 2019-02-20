@@ -150,13 +150,7 @@ defmodule Protein.Server do
 
         transport_server_opts = Keyword.put(transport_opts, :server_mod, __MODULE__)
 
-        [
-          %{
-            id: transport_server_mod,
-            start: {transport_server_mod, :start_link, [transport_server_opts]},
-            shutdown: 15_000
-          }
-        ]
+        [{transport_server_mod, transport_server_opts}]
       end
     end
   end
