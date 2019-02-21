@@ -52,7 +52,7 @@ defmodule Protein.Mixfile do
       {:amqp, "~> 0.2"},
       {:confix, "~> 0.3"},
       {:credo, "~> 0.10", only: [:dev, :test]},
-      {:ex_doc, "~> 0.14", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.19", only: :dev, runtime: false},
       {:excoveralls, "~> 0.8", only: :test},
       {:exprotobuf, "~> 1.2"},
       {:httpoison, "~> 0.13"},
