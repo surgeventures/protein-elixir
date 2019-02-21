@@ -12,22 +12,37 @@ defmodule Protein.AMQPAdapter.Server do
   end
 
   def init(opts) do
+    Process.flag(:trap_exit, true)
     chan = connect(opts)
-    {:ok, {chan, opts}}
+    {:ok, {chan, opts, 0}}
+  end
+
+  def terminate(_reason, {_chan, _opts, running_processes_count}) do
+    wait_for_all_processes(running_processes_count)
+  end
+
+  def wait_for_all_processes(0), do: :ok
+
+  def wait_for_all_processes(running_processes_count) do
+    receive do
+      {:DOWN, _, :process, _, :normal} -> wait_for_all_processes(running_processes_count - 1)
+      _ -> wait_for_all_processes(running_processes_count)
+    end
   end
 
   def handle_info({:basic_consume_ok, _meta}, state), do: {:noreply, state}
   def handle_info({:basic_cancel, _meta}, state), do: {:stop, :normal, state}
   def handle_info({:basic_cancel_ok, _meta}, state), do: {:noreply, state}
 
-  def handle_info({:basic_deliver, payload, meta}, state = {chan, opts}) do
-    spawn(fn -> consume(chan, opts, meta, payload) end)
-    {:noreply, state}
+  def handle_info({:basic_deliver, payload, meta}, {chan, opts, processes}) do
+    pid = spawn(fn -> consume(chan, opts, meta, payload) end)
+    Process.monitor(pid)
+    {:noreply, {chan, opts, processes + 1}}
   end
 
   def handle_info({:DOWN, _, :process, _pid, _reason}, {_, opts}) do
     chan = connect(opts)
-    {:noreply, {chan, opts}}
+    {:noreply, {chan, opts, 0}}
   end
 
   defp connect(opts) do
