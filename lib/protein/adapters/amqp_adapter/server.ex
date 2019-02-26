@@ -2,7 +2,7 @@ defmodule Protein.AMQPAdapter.Server do
   @moduledoc false
 
   use AMQP
-  use GenServer
+  use GenServer, type: :supervisor
   require Logger
   alias AMQP.{Basic, Channel, Connection, Queue}
   alias Protein.Utils
