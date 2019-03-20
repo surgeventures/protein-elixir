@@ -40,9 +40,16 @@ defmodule Protein.AMQPAdapter.Server do
     {:noreply, {chan, opts, processes + 1}}
   end
 
-  def handle_info({:DOWN, _, :process, _pid, _reason}, {_, opts}) do
+  def handle_info(
+        {:DOWN, _, :process, pid, _reason},
+        {%Channel{conn: %Connection{pid: pid}}, opts, _}
+      ) do
     chan = connect(opts)
     {:noreply, {chan, opts, 0}}
+  end
+
+  def handle_info({:DOWN, _, :process, _pid, :normal}, {chan, opts, count}) do
+    {:noreply, {chan, opts, count - 1}}
   end
 
   defp connect(opts) do
