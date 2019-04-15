@@ -4,4 +4,5 @@ defmodule Protein.EmptyClient do
   use Protein.Client
 
   proto(:empty)
+  proto(:error)
 end
