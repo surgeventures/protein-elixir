@@ -94,7 +94,7 @@ defmodule Protein.ServerTest do
 
       {:ok, server_pid} = EmptyServer.start_link()
 
-      result =
+      _result =
         try do
           {:ok, client_pid} = EmptyClient.start_link()
 
@@ -110,8 +110,6 @@ defmodule Protein.ServerTest do
             assert %Protein.TransportError{adapter: Protein.AMQPAdapter, context: :service_error} ==
                      e
         end
-
-      IO.inspect(result)
     after
       Config.persist(
         protein: [
