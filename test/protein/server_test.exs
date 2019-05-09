@@ -9,8 +9,10 @@ defmodule Protein.ServerTest do
     EmptyServer
   }
 
+  import TestUtil
+
   describe "start_link/1" do
-    test "success" do
+    test "graceful shutdown success" do
       Config.persist(
         protein: [
           mocking_enabled: false
@@ -50,6 +52,66 @@ defmodule Protein.ServerTest do
         response ->
           assert {:ok, %Protein.EmptyClient.Empty.Response{}} == response
       end
+    after
+      Config.persist(
+        protein: [
+          mocking_enabled: true
+        ]
+      )
+    end
+
+    test "success" do
+      Config.persist(
+        protein: [
+          mocking_enabled: false
+        ]
+      )
+
+      {:ok, server_pid} = EmptyServer.start_link()
+      {:ok, client_pid} = EmptyClient.start_link()
+
+      request = %EmptyClient.Empty.Request{}
+      _response = EmptyClient.call(request)
+
+      :timer.sleep(50)
+
+      stop_process(server_pid)
+      stop_process(client_pid)
+    after
+      Config.persist(
+        protein: [
+          mocking_enabled: true
+        ]
+      )
+    end
+
+    test "failed" do
+      Config.persist(
+        protein: [
+          mocking_enabled: false
+        ]
+      )
+
+      {:ok, server_pid} = EmptyServer.start_link()
+
+      result =
+        try do
+          {:ok, client_pid} = EmptyClient.start_link()
+
+          request = %EmptyClient.Error.Request{}
+          _response = EmptyClient.call(request)
+
+          :timer.sleep(50)
+
+          stop_process(server_pid)
+          stop_process(client_pid)
+        rescue
+          e ->
+            assert %Protein.TransportError{adapter: Protein.AMQPAdapter, context: :service_error} ==
+                     e
+        end
+
+      IO.inspect(result)
     after
       Config.persist(
         protein: [
