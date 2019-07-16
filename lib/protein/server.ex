@@ -219,8 +219,6 @@ defmodule Protein.Server do
   end
 
   defp log_process(kind, service_name, process_func) do
-    Logger.info(fn -> "Processing RPC #{kind}: #{service_name}" end)
-
     start_time = :os.system_time(:millisecond)
     result = process_func.()
     duration_ms = :os.system_time(:millisecond) - start_time
@@ -232,7 +230,7 @@ defmodule Protein.Server do
         {:call, _} -> "Rejected"
       end
 
-    Logger.info(fn -> "#{status_text} in #{duration_ms}ms" end)
+    Logger.info(fn -> "RPC #{kind} #{service_name} #{status_text} in #{duration_ms}ms" end)
 
     result
   end
