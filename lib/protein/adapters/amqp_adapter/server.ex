@@ -92,7 +92,7 @@ defmodule Protein.AMQPAdapter.Server do
     case Connection.open(url) do
       {:ok, conn} ->
         {:ok, chan} = Channel.open(conn)
-        Queue.declare(chan, queue)
+        Queue.declare(chan, queue, durable: true)
         {:ok, conn, chan}
 
       {:error, _} ->

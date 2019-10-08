@@ -101,6 +101,6 @@ defmodule Protein.AMQPAdapter do
     {chan, _} = get_channel_and_response_queue(connection_name)
     queue = Utils.get_config!(opts, :queue)
 
-    Basic.publish(chan, "", queue, request)
+    Basic.publish(chan, "", queue, request, persistent: true)
   end
 end
