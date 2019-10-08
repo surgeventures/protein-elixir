@@ -138,7 +138,6 @@ defmodule Protein.Client do
   For non-responding services, mock modules are optional and will be executed only if defined.
   Otherwise, the client with mocking mode enabled will still encode the request, but then it will
   silently drop it without throwing an error.
-
   """
 
   alias Protein.{
@@ -175,7 +174,8 @@ defmodule Protein.Client do
     response_mod = Keyword.fetch!(service_opts, :response_mod)
     mock_mod = Keyword.fetch!(service_opts, :mock_mod)
 
-    unless Code.ensure_loaded?(response_mod), do: raise("Called to non-responding service")
+    unless Code.ensure_loaded?(response_mod),
+      do: raise("Called non-responding service")
 
     request_buf = request_mod.encode(request_struct)
 
@@ -200,9 +200,8 @@ defmodule Protein.Client do
   end
 
   defp call_via_mock(request_buf, request_mod, response_mod, mock_mod) do
-    if Utils.mocking_enabled?() do
-      Server.process_service(mock_mod, request_buf, request_mod, response_mod)
-    end
+    if Utils.mocking_enabled?(),
+      do: Server.process_service(mock_mod, request_buf, request_mod, response_mod)
   rescue
     error -> raise TransportError, adapter: :mock, context: error
   end
@@ -232,7 +231,8 @@ defmodule Protein.Client do
     response_mod = Keyword.fetch!(service_opts, :response_mod)
     mock_mod = Keyword.fetch!(service_opts, :mock_mod)
 
-    if Code.ensure_loaded?(response_mod), do: raise("Pushed to responding service")
+    if Code.ensure_loaded?(response_mod),
+      do: raise("Pushed to responding service")
 
     request_buf = request_mod.encode(request_struct)
 
@@ -245,11 +245,9 @@ defmodule Protein.Client do
   defp push_via_mock(request_buf, request_mod, mock_mod) do
     if Utils.mocking_enabled?() do
       mock_or_default_mod =
-        if Code.ensure_loaded?(mock_mod) do
-          mock_mod
-        else
-          DummyServiceMock
-        end
+        if Code.ensure_loaded?(mock_mod),
+          do: mock_mod,
+          else: DummyServiceMock
 
       Server.process_service(mock_or_default_mod, request_buf, request_mod)
     end

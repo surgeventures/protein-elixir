@@ -105,7 +105,8 @@ defmodule Protein.AMQPAdapter.Server do
 
     {response, error} = try_process(payload, server_mod)
 
-    if should_respond(response, meta), do: respond(response, chan, meta)
+    if should_respond(response, meta),
+      do: respond(response, chan, meta)
 
     Basic.ack(chan, meta.delivery_tag)
 
