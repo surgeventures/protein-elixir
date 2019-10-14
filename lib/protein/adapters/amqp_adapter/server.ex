@@ -93,14 +93,18 @@ defmodule Protein.AMQPAdapter.Server do
       {:ok, conn} ->
         {:ok, chan} = Channel.open(conn)
 
-        case Queue.declare(chan, queue, durable: true) do
-          {:ok, _} ->
-            Logger.info("Declared queue #{queue} as durable")
+        chan =
+          case Queue.declare(chan, queue, durable: true) do
+            {:ok, _} ->
+              Logger.info("Declared queue #{queue} as durable")
+              chan
 
-          {:error, _} ->
-            Queue.declare(chan, queue, durable: false)
-            Logger.info("Declared queue #{queue} as non-durable")
-        end
+            {:error, _} ->
+              {:ok, chan} = Channel.open(conn)
+              {:ok, _} = Queue.declare(chan, queue, durable: false)
+              Logger.info("Declared queue #{queue} as non-durable")
+              chan
+          end
 
         {:ok, conn, chan}
 
