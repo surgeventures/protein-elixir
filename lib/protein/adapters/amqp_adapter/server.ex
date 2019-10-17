@@ -61,8 +61,8 @@ defmodule Protein.AMQPAdapter.Server do
       {:ok, conn, chan} ->
         concurrency = Utils.get_config(opts, :concurrency, 5)
         Process.monitor(conn.pid)
-        Basic.qos(chan, prefetch_count: concurrency)
-        Basic.consume(chan, queue)
+        :ok = Basic.qos(chan, prefetch_count: concurrency)
+        {:ok, _consumer_tag} = Basic.consume(chan, queue)
 
         Logger.info(fn ->
           server_mod = Keyword.fetch!(opts, :server_mod)
@@ -78,9 +78,8 @@ defmodule Protein.AMQPAdapter.Server do
         reconnect_int = Utils.get_config(opts, :reconnect_interval, 5_000)
         error_message = "Connection to #{url} failed, reconnecting in #{reconnect_int}ms"
 
-        if custom_error_logger = Application.get_env(:protein, :custom_error_logger) do
-          custom_error_logger.(error_message)
-        end
+        if custom_error_logger = Application.get_env(:protein, :custom_error_logger),
+          do: custom_error_logger.(error_message)
 
         Logger.error(error_message)
         :timer.sleep(reconnect_int)
@@ -121,7 +120,7 @@ defmodule Protein.AMQPAdapter.Server do
     if should_respond(response, meta),
       do: respond(response, chan, meta)
 
-    Basic.ack(chan, meta.delivery_tag)
+    :ok = Basic.ack(chan, meta.delivery_tag)
 
     if error do
       {exception, stacktrace} = error
@@ -148,6 +147,6 @@ defmodule Protein.AMQPAdapter.Server do
       reply_to: reply_to
     } = meta
 
-    Basic.publish(chan, "", reply_to, response, correlation_id: correlation_id)
+    :ok = Basic.publish(chan, "", reply_to, response, correlation_id: correlation_id)
   end
 end

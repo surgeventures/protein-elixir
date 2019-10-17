@@ -5,7 +5,7 @@ defmodule Protein.Mixfile do
     [
       app: :protein,
       version: "0.18.0",
-      elixir: "~> 1.4",
+      elixir: "~> 1.7",
       elixirc_paths: elixirc_paths(Mix.env()),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -49,7 +49,8 @@ defmodule Protein.Mixfile do
 
   defp deps do
     [
-      {:amqp, "~> 0.2"},
+      {:amqp, "~> 1.3.2"},
+      {:jsx, "~> 2.9", override: true},
       {:confix, "~> 0.3"},
       {:credo, "~> 0.10", only: [:dev, :test]},
       {:ex_doc, "~> 0.19", only: :dev, runtime: false},

@@ -63,7 +63,7 @@ defmodule Protein.AMQPAdapter.Connection do
       {:ok, conn, chan} ->
         Process.monitor(conn.pid)
         {:ok, %{queue: response_queue}} = Queue.declare(chan, "", exclusive: true)
-        Basic.consume(chan, response_queue, nil, no_ack: true)
+        {:ok, _consumer_tag} = Basic.consume(chan, response_queue, nil, no_ack: true)
         {chan, response_queue}
 
       :error ->

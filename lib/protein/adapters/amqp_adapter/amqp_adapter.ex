@@ -77,7 +77,7 @@ defmodule Protein.AMQPAdapter do
   defp put_expiration(opts, timeout), do: Keyword.put(opts, :expiration, to_string(timeout))
 
   defp send_request(chan, queue, request, opts) do
-    Basic.publish(chan, "", queue, request, opts)
+    :ok = Basic.publish(chan, "", queue, request, opts)
   end
 
   defp wait_for_response(connection_name, correlation_id, timeout) do
@@ -101,6 +101,6 @@ defmodule Protein.AMQPAdapter do
     {chan, _} = get_channel_and_response_queue(connection_name)
     queue = Utils.get_config!(opts, :queue)
 
-    Basic.publish(chan, "", queue, request, persistent: true)
+    :ok = Basic.publish(chan, "", queue, request, persistent: true)
   end
 end
