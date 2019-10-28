@@ -46,7 +46,6 @@ defmodule Protein.Mixfile do
   defp deps do
     [
       {:amqp, "~> 1.3.2"},
-      {:jsx, "~> 2.9"},
       {:confix, "~> 0.3"},
       {:credo, "~> 0.10", only: [:dev, :test]},
       {:ex_doc, "~> 0.19", only: :dev, runtime: false},
