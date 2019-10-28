@@ -12,12 +12,8 @@ defmodule Protein.Mixfile do
       deps: deps(),
       package: package(),
       aliases: aliases(),
-      test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
-        check: :test,
-        coveralls: :test,
-        "coveralls.detail": :test,
-        "coveralls.html": :test
+        check: :test
       ],
       name: "Protein",
       description: "Multi-platform remote procedure call (RPC) system based on Protocol Buffers",
@@ -50,11 +46,10 @@ defmodule Protein.Mixfile do
   defp deps do
     [
       {:amqp, "~> 1.3.2"},
-      {:jsx, "~> 2.9", override: true},
+      {:jsx, "~> 2.9"},
       {:confix, "~> 0.3"},
       {:credo, "~> 0.10", only: [:dev, :test]},
       {:ex_doc, "~> 0.19", only: :dev, runtime: false},
-      {:excoveralls, "~> 0.8", only: :test},
       {:exprotobuf, "~> 1.2"},
       {:httpoison, "~> 0.13"},
       {:mock, "~> 0.2.1", only: :test},
