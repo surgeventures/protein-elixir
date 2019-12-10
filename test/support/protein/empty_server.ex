@@ -5,6 +5,7 @@ defmodule Protein.EmptyServer do
 
   proto(:empty)
   proto(:error)
+  proto(:async_error)
 end
 
 defmodule Protein.EmptyServer.EmptyService do
@@ -21,5 +22,13 @@ defmodule Protein.EmptyServer.ErrorService do
 
   def call(_request) do
     raise "oops"
+  end
+end
+
+defmodule Protein.EmptyServer.AsyncErrorService do
+  @moduledoc false
+
+  def call(_request) do
+    Task.async(fn -> raise "oops" end) |> Task.await()
   end
 end

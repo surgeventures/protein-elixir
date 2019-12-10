@@ -14,19 +14,24 @@ defmodule Protein.AMQPAdapter.Server do
   def init(opts) do
     Process.flag(:trap_exit, true)
     chan = connect(opts)
-    {:ok, {chan, opts, 0}}
+    state = %{channel: chan, opts: opts, consumers: []}
+    {:ok, state}
   end
 
-  def terminate(_reason, {_chan, _opts, running_processes_count}) do
-    wait_for_all_processes(running_processes_count)
+  def terminate(_reason, %{consumers: consumers}) do
+    wait_for_all_consumers(consumers)
   end
 
-  def wait_for_all_processes(0), do: :ok
+  defp wait_for_all_consumers([]), do: :ok
 
-  def wait_for_all_processes(running_processes_count) do
+  defp wait_for_all_consumers(consumers) do
     receive do
-      {:DOWN, _, :process, _, :normal} -> wait_for_all_processes(running_processes_count - 1)
-      _ -> wait_for_all_processes(running_processes_count)
+      {:DOWN, _, :process, down_pid, :normal} ->
+        present_consumers = Enum.filter(consumers, fn %{pid: pid} -> pid != down_pid end)
+        wait_for_all_consumers(present_consumers)
+
+      _ ->
+        wait_for_all_consumers(consumers)
     end
   end
 
@@ -34,23 +39,42 @@ defmodule Protein.AMQPAdapter.Server do
   def handle_info({:basic_cancel, _meta}, state), do: {:stop, :normal, state}
   def handle_info({:basic_cancel_ok, _meta}, state), do: {:noreply, state}
 
-  def handle_info({:basic_deliver, payload, meta}, {chan, opts, processes}) do
-    pid = spawn(fn -> consume(chan, opts, meta, payload) end)
-    Process.monitor(pid)
-    {:noreply, {chan, opts, processes + 1}}
+  def handle_info(
+        {:basic_deliver, payload, meta},
+        %{
+          channel: chan,
+          opts: opts,
+          consumers: consumers
+        } = state
+      ) do
+    {pid, ref} = spawn_monitor(fn -> consume(chan, opts, meta, payload) end)
+    {:noreply, %{state | consumers: consumers ++ [%{pid: pid, meta: meta, monitor_ref: ref}]}}
   end
 
+  # AQMP connection down
   def handle_info(
         {:DOWN, _, :process, pid, _reason},
-        {%Channel{conn: %Connection{pid: pid}}, opts, _}
+        %{channel: %Channel{conn: %Connection{pid: pid}}, consumers: consumers, opts: opts} = state
       ) do
+    kill_consumers(consumers)
     chan = connect(opts)
-    {:noreply, {chan, opts, 0}}
+    {:noreply, %{state | channel: chan, consumers: []}}
   end
 
-  # handles normal exit and error
-  def handle_info({:DOWN, _, :process, _pid, _reason}, {chan, opts, count}) do
-    {:noreply, {chan, opts, count - 1}}
+  # handles consumer normal exit
+  def handle_info({:DOWN, _, :process, down_pid, :normal}, %{consumers: consumers} = state) do
+    {_consumer, remaining_consumers} = get_consumer(consumers, down_pid)
+    {:noreply, %{state | consumers: remaining_consumers}}
+  end
+
+  # handles consumer error
+  def handle_info(
+        {:DOWN, _, :process, down_pid, _reason},
+        %{channel: chan, consumers: consumers} = state
+      ) do
+    {%{meta: meta}, remaining_consumers} = get_consumer(consumers, down_pid)
+    handle_consumer_error(chan, meta)
+    {:noreply, %{state | consumers: remaining_consumers}}
   end
 
   defp connect(opts) do
@@ -102,26 +126,27 @@ defmodule Protein.AMQPAdapter.Server do
 
   defp consume(chan, opts, meta, payload) do
     server_mod = Keyword.fetch!(opts, :server_mod)
-
-    {response, error} = try_process(payload, server_mod)
-
+    response = server_mod.process(payload)
     if should_respond(response, meta), do: respond(response, chan, meta)
-
     Basic.ack(chan, meta.delivery_tag)
-
-    if error do
-      {exception, stacktrace} = error
-      reraise(exception, stacktrace)
-    end
   end
 
-  defp try_process(payload, server_mod) do
-    response = server_mod.process(payload)
-    {response, nil}
-  rescue
-    exception ->
-      stacktrace = System.stacktrace()
-      {"ESRV", {exception, stacktrace}}
+  defp handle_consumer_error(chan, meta) do
+    if should_respond("ESRV", meta), do: respond("ESRV", chan, meta)
+    Basic.ack(chan, meta.delivery_tag)
+  end
+
+  defp kill_consumers(consumers) do
+    Enum.each(consumers, fn %{pid: pid, monitor_ref: ref} ->
+      Process.demonitor(ref)
+      Process.exit(pid, :kill)
+    end)
+  end
+
+  defp get_consumer(consumers, searched_pid) do
+    [consumer] = Enum.filter(consumers, fn %{pid: pid} -> pid == searched_pid end)
+    remaining_consumers = Enum.filter(consumers, fn %{pid: pid} -> pid != searched_pid end)
+    {consumer, remaining_consumers}
   end
 
   defp should_respond(nil, _meta), do: false
