@@ -24,7 +24,7 @@ defmodule Protein.AMQPAdapter.Connection do
 
   def handle_call({:responder_register, id, timeout}, {pid, _}, state = {_, _, responders, _}) do
     :ets.insert(responders, {id, pid})
-    Process.send_after(self(), {:responder_timoeut, id}, timeout)
+    Process.send_after(self(), {:responder_timeout, id}, timeout)
     {:reply, :ok, state}
   end
 
@@ -50,7 +50,7 @@ defmodule Protein.AMQPAdapter.Connection do
     {:noreply, {chan, response_queue, opts}}
   end
 
-  def handle_info({:responder_timoeut, id}, state = {_, _, responders, _}) do
+  def handle_info({:responder_timeout, id}, state = {_, _, responders, _}) do
     :ets.delete(responders, id)
     {:noreply, state}
   end

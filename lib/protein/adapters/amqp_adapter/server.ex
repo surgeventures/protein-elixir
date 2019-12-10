@@ -48,7 +48,8 @@ defmodule Protein.AMQPAdapter.Server do
     {:noreply, {chan, opts, 0}}
   end
 
-  def handle_info({:DOWN, _, :process, _pid, :normal}, {chan, opts, count}) do
+  # handles normal exit and error
+  def handle_info({:DOWN, _, :process, _pid, _reason}, {chan, opts, count}) do
     {:noreply, {chan, opts, count - 1}}
   end
 
