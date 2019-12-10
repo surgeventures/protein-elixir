@@ -22,9 +22,9 @@ defmodule Protein.AMQPAdapter.Server do
     wait_for_all_consumers(consumers)
   end
 
-  def wait_for_all_consumers([]), do: :ok
+  defp wait_for_all_consumers([]), do: :ok
 
-  def wait_for_all_consumers(consumers) do
+  defp wait_for_all_consumers(consumers) do
     receive do
       {:DOWN, _, :process, down_pid, :normal} ->
         present_consumers = Enum.filter(consumers, fn %{pid: pid} -> pid != down_pid end)
@@ -51,6 +51,7 @@ defmodule Protein.AMQPAdapter.Server do
     {:noreply, %{state | consumers: consumers ++ [%{pid: pid, meta: meta, monitor_ref: ref}]}}
   end
 
+  # AQMP connection down
   def handle_info(
         {:DOWN, _, :process, pid, _reason},
         %{channel: %Channel{conn: %Connection{pid: pid}}, consumers: consumers, opts: opts} = state
@@ -130,19 +131,19 @@ defmodule Protein.AMQPAdapter.Server do
     Basic.ack(chan, meta.delivery_tag)
   end
 
-  def handle_consumer_error(chan, meta) do
+  defp handle_consumer_error(chan, meta) do
     if should_respond("ESRV", meta), do: respond("ESRV", chan, meta)
     Basic.ack(chan, meta.delivery_tag)
   end
 
-  def kill_consumers(consumers) do
+  defp kill_consumers(consumers) do
     Enum.each(consumers, fn %{pid: pid, monitor_ref: ref} ->
       Process.demonitor(ref)
       Process.exit(pid, :kill)
     end)
   end
 
-  def get_consumer(consumers, searched_pid) do
+  defp get_consumer(consumers, searched_pid) do
     [consumer] = Enum.filter(consumers, fn %{pid: pid} -> pid == searched_pid end)
     remaining_consumers = Enum.filter(consumers, fn %{pid: pid} -> pid != searched_pid end)
     {consumer, remaining_consumers}
