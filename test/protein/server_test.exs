@@ -117,5 +117,38 @@ defmodule Protein.ServerTest do
         ]
       )
     end
+
+    test "failed in linked process" do
+      Config.persist(
+        protein: [
+          mocking_enabled: false
+        ]
+      )
+
+      {:ok, server_pid} = EmptyServer.start_link()
+
+      _result =
+        try do
+          {:ok, client_pid} = EmptyClient.start_link()
+
+          request = %EmptyClient.AsyncError.Request{}
+          _response = EmptyClient.call(request)
+
+          :timer.sleep(50)
+
+          stop_process(server_pid)
+          stop_process(client_pid)
+        rescue
+          e ->
+            assert %Protein.TransportError{adapter: Protein.AMQPAdapter, context: :service_error} ==
+                     e
+        end
+    after
+      Config.persist(
+        protein: [
+          mocking_enabled: true
+        ]
+      )
+    end
   end
 end
