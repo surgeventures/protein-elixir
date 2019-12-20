@@ -5,4 +5,5 @@ defmodule Protein.EmptyClient do
 
   proto(:empty)
   proto(:error)
+  proto(:async_error)
 end
