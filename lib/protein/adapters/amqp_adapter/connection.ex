@@ -63,11 +63,11 @@ defmodule Protein.AMQPAdapter.Connection do
       {:ok, conn, chan} ->
         Process.monitor(conn.pid)
         {:ok, %{queue: response_queue}} = Queue.declare(chan, "", exclusive: true)
-        Basic.consume(chan, response_queue, nil, no_ack: true)
+        {:ok, _consumer_tag} = Basic.consume(chan, response_queue, nil, no_ack: true)
         {chan, response_queue}
 
       :error ->
-        Logger.error(fn -> "Connection to #{url} failed, reconnecting in #{reconnect_int}ms" end)
+        Logger.error("Connection to #{url} failed, reconnecting in #{reconnect_int}ms")
         :timer.sleep(reconnect_int)
         connect(opts)
     end

@@ -33,7 +33,6 @@ defmodule Protein.HTTPAdapter do
         transport: [adapter: :http,
                     url: {:system, "REMOTE_RPC_URL"},
                     secret: {:system, "REMOTE_RPC_SECRET"}]
-
   """
 
   alias Protein.{TransportError, Utils}
@@ -60,9 +59,8 @@ defmodule Protein.HTTPAdapter do
     opts = if timeout, do: [recv_timeout: timeout], else: []
     response = HTTPoison.post!(url, body, headers, opts)
 
-    if response.status_code != 200 do
-      raise TransportError, adapter: __MODULE__, context: response.status_code
-    end
+    unless response.status_code == 200,
+      do: raise(TransportError, adapter: __MODULE__, context: response.status_code)
 
     response.body
   end

@@ -41,11 +41,11 @@ defmodule Protein.AMQPAdapter.Server do
 
   def handle_info(
         {:basic_deliver, payload, meta},
-        %{
+        state = %{
           channel: chan,
           opts: opts,
           consumers: consumers
-        } = state
+        }
       ) do
     {pid, ref} = spawn_monitor(fn -> consume(chan, opts, meta, payload) end)
     {:noreply, %{state | consumers: consumers ++ [%{pid: pid, meta: meta, monitor_ref: ref}]}}
@@ -54,7 +54,7 @@ defmodule Protein.AMQPAdapter.Server do
   # AQMP connection down
   def handle_info(
         {:DOWN, _, :process, pid, _reason},
-        %{channel: %Channel{conn: %Connection{pid: pid}}, consumers: consumers, opts: opts} = state
+        state = %{channel: %Channel{conn: %Connection{pid: pid}}, consumers: consumers, opts: opts}
       ) do
     kill_consumers(consumers)
     chan = connect(opts)
@@ -62,7 +62,7 @@ defmodule Protein.AMQPAdapter.Server do
   end
 
   # handles consumer normal exit
-  def handle_info({:DOWN, _, :process, down_pid, :normal}, %{consumers: consumers} = state) do
+  def handle_info({:DOWN, _, :process, down_pid, :normal}, state = %{consumers: consumers}) do
     {_consumer, remaining_consumers} = get_consumer(consumers, down_pid)
     {:noreply, %{state | consumers: remaining_consumers}}
   end
@@ -70,7 +70,7 @@ defmodule Protein.AMQPAdapter.Server do
   # handles consumer error
   def handle_info(
         {:DOWN, _, :process, down_pid, _reason},
-        %{channel: chan, consumers: consumers} = state
+        state = %{channel: chan, consumers: consumers}
       ) do
     {%{meta: meta}, remaining_consumers} = get_consumer(consumers, down_pid)
     handle_consumer_error(chan, meta)
@@ -85,8 +85,8 @@ defmodule Protein.AMQPAdapter.Server do
       {:ok, conn, chan} ->
         concurrency = Utils.get_config(opts, :concurrency, 5)
         Process.monitor(conn.pid)
-        Basic.qos(chan, prefetch_count: concurrency)
-        Basic.consume(chan, queue)
+        :ok = Basic.qos(chan, prefetch_count: concurrency)
+        {:ok, _consumer_tag} = Basic.consume(chan, queue)
 
         Logger.info(fn ->
           server_mod = Keyword.fetch!(opts, :server_mod)
@@ -102,9 +102,8 @@ defmodule Protein.AMQPAdapter.Server do
         reconnect_int = Utils.get_config(opts, :reconnect_interval, 5_000)
         error_message = "Connection to #{url} failed, reconnecting in #{reconnect_int}ms"
 
-        if custom_error_logger = Application.get_env(:protein, :custom_error_logger) do
-          custom_error_logger.(error_message)
-        end
+        if custom_error_logger = Application.get_env(:protein, :custom_error_logger),
+          do: custom_error_logger.(error_message)
 
         Logger.error(error_message)
         :timer.sleep(reconnect_int)
@@ -116,7 +115,22 @@ defmodule Protein.AMQPAdapter.Server do
     case Connection.open(url) do
       {:ok, conn} ->
         {:ok, chan} = Channel.open(conn)
-        Queue.declare(chan, queue)
+
+        chan =
+          try do
+            {:ok, _} = Queue.declare(chan, queue, durable: true)
+            Logger.info("Declared queue #{queue} as durable")
+            chan
+          catch
+            :exit, reason = {{:shutdown, {:server_initiated_close, 406, _message}}, _} ->
+              Logger.debug(inspect(reason))
+
+              {:ok, chan} = Channel.open(conn)
+              {:ok, _} = Queue.declare(chan, queue, durable: false)
+              Logger.info("Declared queue #{queue} as non-durable (fallback-mode)")
+              chan
+          end
+
         {:ok, conn, chan}
 
       {:error, _} ->
@@ -159,6 +173,6 @@ defmodule Protein.AMQPAdapter.Server do
       reply_to: reply_to
     } = meta
 
-    Basic.publish(chan, "", reply_to, response, correlation_id: correlation_id)
+    :ok = Basic.publish(chan, "", reply_to, response, correlation_id: correlation_id)
   end
 end

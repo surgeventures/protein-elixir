@@ -230,7 +230,7 @@ defmodule Protein.Server do
         {:call, _} -> "Rejected"
       end
 
-    Logger.info(fn -> "RPC #{kind} #{service_name} #{status_text} in #{duration_ms}ms" end)
+    Logger.info("RPC #{kind} #{service_name} #{status_text} in #{duration_ms}ms")
 
     result
   end
