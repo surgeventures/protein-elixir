@@ -49,7 +49,7 @@ defmodule Protein.Mixfile do
       {:confix, "~> 0.3"},
       {:credo, "~> 0.10", only: [:dev, :test]},
       {:ex_doc, "~> 0.19", only: :dev, runtime: false},
-      {:exprotobuf, "~> 1.2"},
+      {:exprotobuf, github: "surgeventures/exprotobuf", branch: "jb/rename_modules"},
       {:httpoison, "~> 0.13"},
       {:mock, "~> 0.2.1", only: :test},
       {:poison, "~> 2.0 or ~> 3.0"}

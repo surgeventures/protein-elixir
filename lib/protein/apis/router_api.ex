@@ -166,7 +166,7 @@ defmodule Protein.RouterAPI do
         Holds proto structures for the `#{unquote(service_name)}` service.
         """
 
-        use Protobuf, unquote(proto)
+        use ExProtobuf, unquote(proto)
 
         def __service_opts__, do: unquote(service_opts)
       end
