@@ -52,13 +52,14 @@ defmodule Protein.ClientAPI do
       end
 
       def ensure_connection_started(opts) do
-        import Supervisor.Spec
-
         mod = Keyword.fetch!(opts, :connection_mod)
 
         if Code.ensure_loaded?(mod) && !Utils.mocking_enabled?() do
           pid = Process.whereis(__MODULE__)
-          spec = worker(mod, [opts])
+          spec = %{
+            id: mod,
+            start: {mod, :start_link, [opts]}
+          }
 
           case Supervisor.start_child(pid, spec) do
             {:ok, _} -> nil
